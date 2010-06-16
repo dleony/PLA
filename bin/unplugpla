@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# Author: Abelardo Pardo <abelardo.pardo@uc3m.es>
+#
+# Script to detect the presence of PLA and modify the path accordingly
+#
+# Invoke the script as:
+#
+# <script> directory
+#
+#
+if [ $# -ne 1 ]; then
+  echo "Script needs a directory to search for PLA"
+elif [ "$1" = "" ]; then
+  echo "Script needs a directory to search for PLA"
+else
+  plaDir=$1
+  if [ ! -d $plaDir ]; then
+    echo "$plaDir is not a directory"
+  else
+    plaDir=`(cd $1; pwd)`
+
+    # Remove the path in case is already there
+    export PATH=$(echo $PATH | sed -e "s;:$plaDir:;;" \
+                                   -e "s;$plaDir:;;" \
+                                   -e "s;:$plaDir;;")
+  fi
+fi
+
