@@ -1,0 +1,100 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-#
+#
+# Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
+#
+import os, glob, sys, re, logging, getopt, locale, pysvn, subprocess
+
+import PLABash
+
+def findPLADataDir(startDir):
+
+    index = 0 # To limit the number of levels searched
+    startDir = os.path.abspath(startDir) # Manage absolute paths
+
+    # While levels remaining, the dir exists and there is no .pladata loop
+    while (index < 20) and \
+            os.path.exists(startDir) and \
+            not os.path.exists(os.path.join(startDir, '.pladata')):
+        startDir = os.path.abspath(os.path.join(startDir, '..'))
+        index = index + 1
+        
+    # If .pladata was found, return it
+    if os.path.exists(os.path.join(startDir, '.pladata')):
+        return os.path.abspath(startDir)
+
+    # Nothing found
+    return None
+
+def main():
+    """
+    Application to take a svn command, execute it regularly and then gather
+    information about a set of events, compress the files and send them also as
+    a commit operation.
+    """
+
+# Remaining issues:
+#
+# * To log or not to log, that is the question
+
+    # Set the logging format
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(levelname)s %(message)s')
+
+    # Obtain the PLA directory from the command
+    plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
+                                                    '..'))
+ 
+    # Modify the first argument to point to the true executable
+    sys.argv[0] = '/usr/bin/svn'
+
+    # Execute the given SVN command regularly
+    try:
+        givenCmd = subprocess.Popen(sys.argv)
+        givenCmd.wait()
+    except OSError, e:
+        print 'File not found (PLA)'
+        sys.exit(0)
+    except ValueError, e:
+        print 'Incorrect arguments (PLA)'
+        sys.exit(0)
+        
+    (svnOutput, svnError) = givenCmd.communicate()
+
+    # Dump output and error if not None
+    if svnOutput != None:
+        print svnOutput
+
+    if svnError != None:
+        print svnError
+
+    # Original command is execute, store the return status to return when the
+    # script finishes.
+    originalStatus = givenCmd.returncode
+
+    # See if there is a .pladata file, if not, terminate
+    localPLADirectory = findPLADataDir(os.getcwd())
+    if localPLADirectory == None:
+        print "[DEBUG] No local .pladata"
+        sys.exit(originalStatus)
+
+    # 1) Gather information depending on the tool and place it in the proper
+    # location (gzipped)
+    # 2) Add file 
+    # 3) Commit
+    createdFiles = []
+
+    # Bash instrumentation
+    createdFiles.extend(PLABash.instrument(plaDirectory, localPLADirectory))
+
+    print createdFiles
+    # Zip()
+
+    # Add()
+
+    # Commit()
+
+    sys.exit(originalStatus)
+        
+if __name__ == "__main__":
+    main()
