@@ -1,0 +1,10 @@
+Required tools
+* Python
+* Python-svn
+
+Required path:
+
+PLA_PREVIOUS_PATH=$PATH  
+PATH=$PWD:$PATH
+
+PATH=$PLA_PREVIOUS_PATH
