@@ -1,10 +1,24 @@
-Required tools
-* Python
-* Python-svn
+* Required tools
+  * Python
+  * Python-svn
 
-Required path:
+* Installation:
+  cd $HOME
+  tar zxvf PLA.tgz
 
-PLA_PREVIOUS_PATH=$PATH  
-PATH=$PWD:$PATH
+* Adjustments
+  cd $HOME/.pladata/bin
+  source plugpla
 
-PATH=$PLA_PREVIOUS_PATH
+* Verify that PLA is properly installing with:
+  which svn
+  It must return a path to the $HOME/.pladata/bin directory
+
+* BASH
+
+  Edit the .bashrc and add the following changes
+
+  unset HISTCONTROL     # Stores all the commands, no exceptions
+  HISTFILESIZE=50000    # Huge history file to catch everything
+
+* 
