@@ -17,26 +17,30 @@ def main():
 def instrument(plaDirectory, localSvnRoot):
     # If no file is present in pladirectory, nothing to return
     if not os.path.exists(os.path.join(plaDirectory, 'tools', 'bash')):
-        PLABasic.logMessage("Bash instrumentation disabled. Skipping")
+        PLABasic.logMessage("Bash.instrument: Disabled. Skipping")
         return []
 
     historyFile = os.path.expanduser('~/.bash_history')
+
+    # If the file is present, but it is empty (because we reset it, done
+    if os.path.getsize(historyFile):
+        return []
+
     if historyFile == '~/.bash_history' or not os.path.exists(historyFile):
         return []
 
-    result = PLABasic.getUniqueFileName() + '.bash'
-    PLABasic.gzipFile(historyFile, os.path.join(localSvnRoot, '.pladata', 
-                                                result))
+    # result = PLABasic.getUniqueFileName() + '.bash'
+    # PLABasic.gzipFile(historyFile, os.path.join(localSvnRoot, '.pladata', 
+    #                                             result))
 
-    return [result]
+    return [historyFile]
 
 def resetData(plaDirectory, localSvnRoot):
     # Reset the history file
-    fobj = open(fromFile, 'w')
+    historyFile = os.path.expanduser('~/.bash_history')
+    PLABasic.logMessage("Bash.instrument: Removing " + historyFile)
+    fobj = open(historyFile, 'w')
     fobj.close()
-    
-    # pass
 
-    
 if __name__ == "__main__":
     main()

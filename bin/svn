@@ -14,25 +14,18 @@ def main():
     a commit operation.
     """
 
-# Remaining issues:
-#
-# * To log or not to log, that is the question
-
-    # Set the logging format
-    # logging.basicConfig(level=logging.INFO,
-    #                    format='%(asctime)s %(levelname)s %(message)s')
-
     # Obtain the PLA directory from the command
     PLABasic.plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
                                                     '..'))
 
-    PLABasic.logMessage("plaDirectory = " + PLABasic.plaDirectory)
+    PLABasic.logMessage("svn: plaDirectory = " + PLABasic.plaDirectory)
 
     # Modify the first argument to point to the true executable
     sys.argv[0] = '/usr/bin/svn'
 
     # Execute the given SVN command regularly
     try:
+        PLABasic.logMessage('svn: executing ' + str(sys.argv))
         givenCmd = subprocess.Popen(sys.argv)
         givenCmd.wait()
     except OSError, e:
@@ -51,41 +44,89 @@ def main():
     if svnError != None:
         print svnError
 
-    # If the command is NOT a commit, we are done
-    if not 'commit' in sys.argv:
-        sys.exit(originalStatus)
-
     # Original command is execute, store the return status to return when the
     # script finishes.
     originalStatus = givenCmd.returncode
+    PLABasic.logMessage('svn: command status = ' + str(originalStatus))
+
+    # TO BE DONE: How to detect that the command went OK. If a commit failed it
+    # might be due to network problems, so the additional commit should not be
+    # executed.
+    
+    # If the command is NOT a commit, we are done
+    if not 'commit' in sys.argv:
+        PLABasic.logMessage('svn: not a commit. Done')
+        sys.exit(originalStatus)
 
     # See if there is a .pladata file, if not, terminate
 
     svnPLADirectory = PLABasic.findPLASVNDataDir(os.getcwd())
     if svnPLADirectory == None:
-        PLABasic.logMessage("No dir .pladata in SVN")
+        PLABasic.logMessage("svn: No dir .pladata in SVN")
         sys.exit(originalStatus)
 
     # 1) Gather information depending on the tool and place it in the proper
-    # location (gzipped)
-    # 2) Add file 
-    # 3) Commit
-    createdFiles = []
+    # location
+    # 2) Create a TGZ with all the files
+    # 3) Add the file to SVN
+    # 4) Commit the new file to SVN
+    dataFiles = []
 
+
+    ############################################################
+    #
+    # INSTRUMENTATION
+    #
+    ############################################################
+
+    ############################################################
     # Bash instrumentation
-    createdFiles.extend(PLABash.instrument(PLABasic.plaDirectory, 
+    ############################################################
+    dataFiles.extend(PLABash.instrument(PLABasic.plaDirectory, 
                                            svnPLADirectory))
 
-    PLABasic.logMessage('Created files = ' + str(createdFiles))
+    ############################################################
+    # GCC instrumentation
+    ############################################################
 
-    # Add()
+    ############################################################
+    # GDB instrumentation
+    ############################################################
 
-    # Commit()
+    ############################################################
+    # Valgrind instrumentation
+    ############################################################
+
+    ############################################################
+    # Kdevelop instrumentation
+    ############################################################
+
+    ############################################################
+    # Kate instrumentation
+    ############################################################
+
+    ############################################################
+    # iWatch instrumentation
+    ############################################################
+
+    ############################################################
+    # Firefox instrumentation
+    ############################################################
+
+    ############################################################
+    PLABasic.logMessage('svn: Data files = ' + str(dataFiles))
+
+    # TGZ all the data files
+    tarFile = os.path.join(svnPLADirectory, \
+                               PLABasic.getUniqueFileName() + '.tgz')
+    PLABasic.createTarFile(dataFiles, tarFile)
+
     # Fetch the svn client
     svnClient = pysvn.Client()
     svnClient.exception_style = 1
 
     try:
+        PLABasic.logMessage("svn: update " + svnPLADirectory)
         svnClient.update(svnPLADirectory)
     except pysvn.ClientError, e:
         # Exception when updating, not much we can do, log a message if in
@@ -94,18 +135,61 @@ def main():
         sys.exit(originalStatus)
     
 
-    for fileName in createdFiles:
-        try:
-            svnClient.add(fileName)
-        except pysvn.ClientError, e:
-            PLABasic.dumpException(e)
-
-    # Final commit 
+    # ADD: For each of the newly created files add it to subversion
     try:
-        svnClient.checkin(svnPLADirectory, 'PLA Automatic commit')
+        PLABasic.logMessage("svn: add " + tarFile)
+        svnClient.add(tarFile)
+    except pysvn.ClientError, e:
+        PLABasic.dumpException(e)
+
+    # TO BE DONE: Walk over the svnPLADirectory and find files that are NOT
+    # under version control. It might be due to previous SVN command failures.
+
+    # COMMIT: Final commit of the data directory
+    try:
+        PLABasic.logMessage("svn: commit " + tarFile)
+        svnClient.checkin(tarFile, 'PLA Automatic commit')
     except pysvn.ClientError, e:
         PLABasic.dumpException(e)
         
+    ############################################################
+    #
+    # Reset data sources (if needed)
+    #
+    ############################################################
+
+    ############################################################
+    # Bash reset
+    ############################################################
+    PLABash.resetData(PLABasic.plaDirectory, svnPLADirectory)
+
+    ############################################################
+    # GCC reset
+    ############################################################
+
+    ############################################################
+    # GDB reset
+    ############################################################
+
+    ############################################################
+    # Valgrind reset
+    ############################################################
+
+    ############################################################
+    # Kdevelop reset
+    ############################################################
+
+    ############################################################
+    # Kate reset
+    ############################################################
+
+    ############################################################
+    # iWatch reset
+    ############################################################
+
+    ############################################################
+    # Firefox reset
+    ############################################################
 
     # And terminate gracefully with the status generated by the original SVN
     sys.exit(originalStatus)
