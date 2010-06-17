@@ -5,27 +5,17 @@
 * Installation:
   cd $HOME
   tar zxvf PLA.tgz
+  mv PLA $HOME/.pladata
 
 * Adjustments
   cd $HOME/.pladata/bin
   source plugpla
 
-* Verify that PLA is properly installing with:
+* Verify that PLA is properly installed with:
+
   which svn
+
   It must return a path to the $HOME/.pladata/bin directory
 
 * If there is a directory 'test' in $HOME/.pladata the commands print debug info
-
-* BASH
-
-  Edit the .bashrc and add the following changes
-
-  unset HISTCONTROL     # Stores all the commands, no exceptions
-  HISTFILESIZE=50000    # Huge history file to catch everything
-
-  Add at the end
-
-  if [ -f ~/.pladata/bin/plugpla ]; then
-      source ~/.pladata/bin/plugpla ~/.pladata/bin
-  fi
 
