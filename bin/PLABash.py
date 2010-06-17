@@ -12,13 +12,12 @@ def main():
     Script to gather the bash history, compress the file. Returns a list of
     files that are to be compressed, added and committed.
     """
-
     pass
 
 def instrument(plaDirectory, localSvnRoot):
     # If no file is present in pladirectory, nothing to return
     if not os.path.exists(os.path.join(plaDirectory, 'tools', 'bash')):
-        print "[DEBUG] Skipping bash"
+        PLABasic.logMessage("Bash instrumentation disabled. Skipping")
         return []
 
     historyFile = os.path.expanduser('~/.bash_history')
