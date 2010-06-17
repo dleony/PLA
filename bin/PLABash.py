@@ -7,7 +7,7 @@ import os
 
 import PLABasic
 
-__bashDataDir = os.path.join(plaDirectory, 'tools', 'bash')
+__bashDataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'bash')
 __bashDataFile = os.path.expanduser('~/.bash_history')
 
 def main(): 
