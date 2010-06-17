@@ -94,7 +94,7 @@ def instrument():
         return []
 
     # If the log file does not exist, nothing to do
-    if __not os.path.exists(__gccDataFile):
+    if not os.path.exists(__gccDataFile):
         return []
 
     # If the file is present, but it is empty (because we reset it, done
@@ -109,17 +109,18 @@ def resetData():
 
     # If no file is present in pladirectory, nothing to return
     if not os.path.exists(__gccDataDir):
-        PLABasic.logMessage("gcc-instrument: Disabled. Skipping")
+        PLABasic.logMessage("gcc.instrument: Disabled. Skipping")
         return []
 
     # If the log file does not exist, nothing to do
-    if __not os.path.exists(__gccDataFile):
+    if not os.path.exists(__gccDataFile):
         return []
 
     # If the file is present, but it is empty (because we reset it, done
     if os.path.getsize(__gccDataFile) == 0:
         return []
 
+    PLABasic.logMessage("gcc.instrument: Removing " + __gccDataFile)
     fobj = open(__gccDataFile, 'w')
     fobj.close()
 
