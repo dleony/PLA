@@ -3,9 +3,11 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, glob, sys, re, logging, getopt, locale, pysvn, subprocess
+import os, sys, getopt, locale, pysvn, subprocess, imp
 
 import PLABash, PLABasic
+
+imp.load_source("PLAGcc", "gcc")
 
 def main():
     """
@@ -13,10 +15,6 @@ def main():
     information about a set of events, compress the files and send them also as
     a commit operation.
     """
-
-    # Obtain the PLA directory from the command
-    PLABasic.plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
-                                                    '..'))
 
     PLABasic.logMessage("svn: plaDirectory = " + PLABasic.plaDirectory)
 
@@ -27,7 +25,6 @@ def main():
     try:
         PLABasic.logMessage('svn: executing ' + str(sys.argv))
         givenCmd = subprocess.Popen(sys.argv)
-        givenCmd.wait()
     except OSError, e:
         print 'File not found (PLA)'
         sys.exit(0)
@@ -35,17 +32,11 @@ def main():
         print 'Incorrect arguments (PLA)'
         sys.exit(0)
         
-    (svnOutput, svnError) = givenCmd.communicate()
+    # Wait for the process to terminate
+    givenCmd.wait()
 
-    # Dump output and error if not None
-    if svnOutput != None:
-        print svnOutput
-
-    if svnError != None:
-        print svnError
-
-    # Original command is execute, store the return status to return when the
-    # script finishes.
+    # Original command is execute, store the return status to return when
+    # the script finishes.
     originalStatus = givenCmd.returncode
     PLABasic.logMessage('svn: command status = ' + str(originalStatus))
 
@@ -59,7 +50,6 @@ def main():
         sys.exit(originalStatus)
 
     # See if there is a .pladata file, if not, terminate
-
     svnPLADirectory = PLABasic.findPLASVNDataDir(os.getcwd())
     if svnPLADirectory == None:
         PLABasic.logMessage("svn: No dir .pladata in SVN")
@@ -82,12 +72,12 @@ def main():
     ############################################################
     # Bash instrumentation
     ############################################################
-    dataFiles.extend(PLABash.instrument(PLABasic.plaDirectory, 
-                                           svnPLADirectory))
+    dataFiles.extend(PLABash.instrument())
 
     ############################################################
     # GCC instrumentation
     ############################################################
+    dataFiles.extend(PLAGcc.instrument())
 
     ############################################################
     # GDB instrumentation
@@ -161,11 +151,12 @@ def main():
     ############################################################
     # Bash reset
     ############################################################
-    PLABash.resetData(PLABasic.plaDirectory, svnPLADirectory)
+    PLABash.resetData()
 
     ############################################################
     # GCC reset
     ############################################################
+    PLAGcc.resetData()
 
     ############################################################
     # GDB reset

@@ -3,43 +3,56 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, glob, sys, re, logging, getopt, locale, pysvn, subprocess
+import os
 
 import PLABasic
 
+__bashDataDir = os.path.join(plaDirectory, 'tools', 'bash')
+__bashDataFile = os.path.expanduser('~/.bash_history')
+
 def main(): 
     """
-    Script to gather the bash history, compress the file. Returns a list of
-    files that are to be compressed, added and committed.
+    Script to simply return the history file and reset its content
     """
     pass
 
-def instrument(plaDirectory, localSvnRoot):
+def instrument():
+    global __bashDataDir
+    global __bashDataFile
+
     # If no file is present in pladirectory, nothing to return
-    if not os.path.exists(os.path.join(plaDirectory, 'tools', 'bash')):
+    if not os.path.exists(__bashDataDir):
         PLABasic.logMessage("Bash.instrument: Disabled. Skipping")
         return []
 
-    historyFile = os.path.expanduser('~/.bash_history')
+    if __bashDataFile == '~/.bash_history' or not os.path.exists(__bashDataFile):
+        return []
 
     # If the file is present, but it is empty (because we reset it, done
-    if os.path.getsize(historyFile):
+    if os.path.getsize(__bashDataFile) == 0:
         return []
 
-    if historyFile == '~/.bash_history' or not os.path.exists(historyFile):
+    return [__bashDataFile]
+
+def resetData():
+    global __bashDataDir
+    global __bashDataFile
+
+    # If no file is present in pladirectory, nothing to return
+    if not os.path.exists(__bashDataDir):
+        PLABasic.logMessage("Bash.instrument: Disabled. Skipping")
         return []
 
-    # result = PLABasic.getUniqueFileName() + '.bash'
-    # PLABasic.gzipFile(historyFile, os.path.join(localSvnRoot, '.pladata', 
-    #                                             result))
+    if __bashDataFile == '~/.bash_history' or not os.path.exists(__bashDataFile):
+        return
 
-    return [historyFile]
+    # If the file is present, but it is empty (because we reset it, done
+    if os.path.getsize(__bashDataFile) == 0:
+        return []
 
-def resetData(plaDirectory, localSvnRoot):
     # Reset the history file
-    historyFile = os.path.expanduser('~/.bash_history')
-    PLABasic.logMessage("Bash.instrument: Removing " + historyFile)
-    fobj = open(historyFile, 'w')
+    PLABasic.logMessage("Bash.instrument: Removing " + __bashDataFile)
+    fobj = open(__bashDataFile, 'w')
     fobj.close()
 
 if __name__ == "__main__":

@@ -6,8 +6,8 @@
 import os, glob, sys, re, logging, getopt, locale, tarfile, time
 
 # Directory in user HOME containing the instrumented commands
-plaDirectory = None
-
+plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
+                                                    '..'))
 def findPLASVNDataDir(startDir = os.getcwd()):
 
     index = 0 # To limit the number of levels searched
