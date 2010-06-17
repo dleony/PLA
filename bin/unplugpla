@@ -9,21 +9,25 @@
 # <script> directory
 #
 #
-if [ $# -ne 1 ]; then
-  echo "Script needs a directory to search for PLA"
-elif [ "$1" = "" ]; then
-  echo "Script needs a directory to search for PLA"
+plaDir=''
+if [ "$1" = "" ]; then
+  plaDir=$PWD
 else
-  plaDir=$1
-  if [ ! -d $plaDir ]; then
-    echo "$plaDir is not a directory"
+  if [ $# -ne 1 ]; then
+    echo "Script needs at most a directory to search for PLA"
+    plaDir=''
   else
-    plaDir=`(cd $1; pwd)`
-
-    # Remove the path in case is already there
-    export PATH=$(echo $PATH | sed -e "s;:$plaDir:;;" \
-                                   -e "s;$plaDir:;;" \
-                                   -e "s;:$plaDir;;")
+    plaDir=$1
   fi
 fi
 
+if [ ! -d $plaDir ]; then
+  echo "$plaDir is not a directory"
+elif [ "$plaDir" != '' ]; then
+  plaDir=`(cd $plaDir; pwd)`
+
+  # Remove the path in case is already there
+  export PATH=$(echo $PATH | sed -e "s;:$plaDir:;;" \
+                                 -e "s;$plaDir:;;" \
+                                 -e "s;:$plaDir;;")
+fi
