@@ -1,4 +1,18 @@
 ----------------------
+PATHS
+----------------------
+  - Add at the end of ~/.bashrc
+  if [ -f ~/.pladata/bin/plugpla ]; then
+      source ~/.pladata/bin/plugpla ~/.pladata/bin
+  fi
+
+  - Add (or create) ~/.bash_login and add the same lines
+  if [ -f ~/.pladata/bin/plugpla ]; then
+      source ~/.pladata/bin/plugpla ~/.pladata/bin
+  fi
+  
+
+----------------------
 HISTORY
 ----------------------
   - Edit the .bashrc and add the following changes
@@ -7,7 +21,3 @@ HISTORY
   HISTFILESIZE=50000    # Huge history file to catch everything
   Make sure it is the last line manipulating these variables.
 
-  - Add at the end
-  if [ -f ~/.pladata/bin/plugpla ]; then
-      source ~/.pladata/bin/plugpla ~/.pladata/bin
-  fi
