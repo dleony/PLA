@@ -20,9 +20,7 @@ def main():
     global dataFile
 
     PLABasic.logMessage("kdevelop: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("kdevelop: DataDir = " + dataDir)
     PLABasic.logMessage("kdevelop: DataFile = " + dataFile)
-
 
     # Modify the first argument to point to the true executable
     sys.argv[0] = '/usr/bin/kdevelop'

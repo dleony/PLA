@@ -20,7 +20,6 @@ def main():
     global dataFile
 
     PLABasic.logMessage("gcc: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("gcc: DataDir = " + dataDir)
     PLABasic.logMessage("gcc: DataFile = " + dataFile)
 
     # Modify the first argument to point to the true executable

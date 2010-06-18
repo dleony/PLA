@@ -20,9 +20,7 @@ def main():
     global dataFile
 
     PLABasic.logMessage("kate: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("kate: DataDir = " + dataDir)
     PLABasic.logMessage("kate: DataFile = " + dataFile)
-
 
     # Modify the first argument to point to the true executable
     sys.argv[0] = '/usr/bin/kate'

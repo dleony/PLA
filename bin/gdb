@@ -20,9 +20,7 @@ def main():
     global dataFile
 
     PLABasic.logMessage("gdb: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("gdb: DataDir = " + dataDir)
     PLABasic.logMessage("gdb: DataFile = " + dataFile)
-
 
     # Modify the first argument to point to the true executable
     sys.argv[0] = '/usr/bin/gdb'
