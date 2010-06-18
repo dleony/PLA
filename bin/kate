@@ -1,0 +1,33 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-#
+#
+# Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
+#
+import os, sys
+
+import PLABasic
+
+dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'kate')
+dataFile = os.path.join(dataDir, 'katelog.txt')
+
+def main(): 
+    """
+    Application to wrap the execution of the kate editor. Execute it normally
+    and record its invocation.
+    """
+    
+    global dataDir
+    global dataFile
+
+    PLABasic.logMessage("kate: plaDirectory = " + PLABasic.plaDirectory)
+    PLABasic.logMessage("kate: DataDir = " + dataDir)
+    PLABasic.logMessage("kate: DataFile = " + dataFile)
+
+
+    # Modify the first argument to point to the true executable
+    sys.argv[0] = '/usr/bin/kate'
+
+    sys.exit(PLABasic.executeAndLogExecution(dataDir, dataFile, 'kate'))
+
+if __name__ == "__main__":
+    main()
