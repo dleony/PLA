@@ -8,10 +8,12 @@ import os, sys, getopt, locale, pysvn, subprocess, imp
 import PLABash, PLABasic
 
 # Load the modules with names without the .py extension
-PLAGdb = imp.load_source('PLAGdb', os.path.join(PLABasic.plaDirectory, 'bin', \
-                                                    'gdb'))
 PLAGcc = imp.load_source('PLAGcc', os.path.join(PLABasic.plaDirectory, 'bin', \
                                                     'gcc'))
+PLAGdb = imp.load_source('PLAGdb', os.path.join(PLABasic.plaDirectory, 'bin', \
+                                                    'gdb'))
+PLAKate = imp.load_source('PLAKate', os.path.join(PLABasic.plaDirectory, 'bin', \
+                                                      'kate'))
 
 def main():
     """
@@ -107,6 +109,10 @@ def main():
     ############################################################
     # Kate instrumentation
     ############################################################
+    dataFiles.extend(PLABasic.prepareDataFile(PLAKate.dataDir,
+                                              PLAKate.dataFile,
+                                              'kate',
+                                              tarFileName))
 
     ############################################################
     # iWatch instrumentation
@@ -191,6 +197,7 @@ def main():
     ############################################################
     # Kate reset
     ############################################################
+    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'gdb', tarFileName)
 
     ############################################################
     # iWatch reset
