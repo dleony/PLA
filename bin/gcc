@@ -8,7 +8,7 @@ import os, sys, subprocess, datetime
 import PLABasic
 
 dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'gcc')
-dataFile = os.path.join(dataDir, 'gcclog.txt')
+dataFile = os.path.join(dataDir, 'gcc')
 
 def main(): 
     """

@@ -8,7 +8,7 @@ import os, sys
 import PLABasic
 
 dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'gdb')
-dataFile = os.path.join(dataDir, 'gdblog.txt')
+dataFile = os.path.join(dataDir, 'gdb')
 
 def main(): 
     """

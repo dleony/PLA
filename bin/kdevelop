@@ -8,7 +8,7 @@ import os, sys
 import PLABasic
 
 dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'kdevelop')
-dataFile = os.path.join(dataDir, 'kdeveloplog.txt')
+dataFile = os.path.join(dataDir, 'kdevelop')
 
 def main(): 
     """

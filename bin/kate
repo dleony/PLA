@@ -8,7 +8,7 @@ import os, sys
 import PLABasic
 
 dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'kate')
-dataFile = os.path.join(dataDir, 'katelog.txt')
+dataFile = os.path.join(dataDir, 'kate')
 
 def main(): 
     """

@@ -8,7 +8,7 @@ import os, sys
 import PLABasic
 
 dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'valgrind')
-dataFile = os.path.join(dataDir, 'valgrindlog.txt')
+dataFile = os.path.join(dataDir, 'valgrind')
 
 def main(): 
     """
