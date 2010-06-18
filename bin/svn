@@ -8,10 +8,10 @@ import os, sys, getopt, locale, pysvn, subprocess, imp
 import PLABash, PLABasic
 
 # Load the modules with names without the .py extension
-PLAGcc = imp.load_source('PLAGcc', os.path.join(PLABasic.plaDirectory, 'bin', \
-                                                    'gcc'))
 PLAGdb = imp.load_source('PLAGdb', os.path.join(PLABasic.plaDirectory, 'bin', \
                                                     'gdb'))
+PLAGcc = imp.load_source('PLAGcc', os.path.join(PLABasic.plaDirectory, 'bin', \
+                                                    'gcc'))
 
 def main():
     """
@@ -64,7 +64,7 @@ def main():
     # 3) Add the file to SVN
     # 4) Commit the new file to SVN
     dataFiles = []
-
+    tarFileName = PLABasic.getUniqueFileName()
 
     ############################################################
     #
@@ -75,23 +75,26 @@ def main():
     ############################################################
     # Bash instrumentation
     ############################################################
-    dataFiles.extend(PLABasic.instrument(PLABash.dataDir, 
-                                         PLABash.dataFile, 
-                                         'bash'))
+    dataFiles.extend(PLABasic.prepareDataFile(PLABash.dataDir, 
+                                              PLABash.dataFile, 
+                                              'bash',
+                                              tarFileName))
 
     ############################################################
     # GCC instrumentation
     ############################################################
-    dataFiles.extend(PLABasic.instrument(PLAGcc.dataDir,
-                                         PLAGcc.dataFile,
-                                         'gcc'))
+    dataFiles.extend(PLABasic.prepareDataFile(PLAGcc.dataDir,
+                                              PLAGcc.dataFile,
+                                              'gcc',
+                                              tarFileName))
 
     ############################################################
     # GDB instrumentation
     ############################################################
-    dataFiles.extend(PLABasic.instrument(PLAGcc.dataDir,
-                                         PLAGcc.dataFile,
-                                         'gdb'))
+    dataFiles.extend(PLABasic.prepareDataFile(PLAGdb.dataDir,
+                                              PLAGdb.dataFile,
+                                              'gdb',
+                                              tarFileName))
 
     ############################################################
     # Valgrind instrumentation
@@ -166,17 +169,17 @@ def main():
     ############################################################
     # Bash reset
     ############################################################
-    PLABasic.resetData(PLABash.dataDir, PLABash.dataFile, 'bash')
+    PLABasic.resetData(PLABash.dataDir, PLABash.dataFile, 'bash', tarFileName)
 
     ############################################################
     # GCC reset
     ############################################################
-    PLABasic.resetData(PLAGcc.dataDir, PLAGcc.dataFile, 'gcc')
+    PLABasic.resetData(PLAGcc.dataDir, PLAGcc.dataFile, 'gcc', tarFileName)
 
     ############################################################
     # GDB reset
     ############################################################
-    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'gdb')
+    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'gdb', tarFileName)
 
     ############################################################
     # Valgrind reset

@@ -3,7 +3,7 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, glob, sys, re, logging, getopt, locale, tarfile, time
+import os, sys, tarfile, time, datetime, subprocess, shutil
 
 # Directory in user HOME containing the instrumented commands
 plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
@@ -36,13 +36,15 @@ def findPLASVNDataDir(startDir = os.getcwd()):
 
 def executeAndLogExecution(dataDir, dataFile, prefix): 
     """
-    Application to wrap the execution of a program and dump a file noting its
-    execution in the dataFile.
+    Application to wrap the execution of whatever is in sys.argv and dump a file
+    noting its execution in the dataFile.
+
+    Returns the command status obtained from its execution
     """
     
     # Execute the given command normally
     try:
-        PLABasic.logMessage(prefix + ': executing ' + str(sys.argv))
+        logMessage(prefix + ': executing ' + str(sys.argv))
         givenCmd = subprocess.Popen(sys.argv)
     except OSError, e:		  
         print 'File not found (PLA)'
@@ -56,11 +58,11 @@ def executeAndLogExecution(dataDir, dataFile, prefix):
 
     # Store the return status to return when the script finishes.
     originalStatus = givenCmd.returncode
-    PLABasic.logMessage(prefix + ': command status = ' + str(originalStatus))
+    logMessage(prefix + ': command status = ' + str(originalStatus))
 
     # If no file is present in pladirectory, no instrumentation
     if not os.path.exists(dataDir):
-        PLABasic.logMessage(prefix + ': Disabled. Skipping')
+        logMessage(prefix + ': Disabled. Skipping')
         return originalStatus
 
     # Append the captured messages to the file with a separator
@@ -68,7 +70,9 @@ def executeAndLogExecution(dataDir, dataFile, prefix):
 
     # Dump a mark status and time/date
     dataOut.write(str(originalStatus) + ' ' \
-                         + str(datetime.datetime.now())[:-7] + '\n')
+                      + str(datetime.datetime.now())[:-7] + ' ' \
+                      + ' '.join(map(lambda x: '\'' + x + '\'', sys.argv)) \
+                      + '\n')
     dataOut.close()
 
     return originalStatus
@@ -101,42 +105,76 @@ def createTarFile(fileList, toFile):
 
     return
 
-def instrument(dataDir, dataFile, prefix):
+def prepareDataFile(dataDir, dataFile, logPrefix, suffix):
+    """ 
+    Function that prepares the given data file to be included in the tar. It
+    checks first if it is allowed to send this data, if the file is there and is
+    not empty. If so, creates a duplicate adding the suffix and returns that
+    file name.
+    """
+
+    # Log the execution of this function
+    logMessage(logPrefix + ': prepare ' + dataFile)
 
     # If no file is present in pladirectory, nothing to return
     if not os.path.exists(dataDir):
-        logMessage(prefix + ': Disabled. Skipping')
+        logMessage(logPrefix + ': Disabled. Skipping')
         return []
 
     # If the file does not exist, done
     if not os.path.exists(dataFile):
-        logMessage(prefix + ': ' + dataFile + ' not present')
+        logMessage(logPrefix + ': ' + dataFile + ' not present')
         return []
 
     # If the file is empty, done
     if os.path.getsize(dataFile) == 0:
-        logMessage(prefix + ': Empty data file')
+        logMessage(logPrefix + ': Empty data file')
         return []
 
-    return [dataFile]
+    # Create a duplicate of the data file with the suffix
+    duplicateFileName = dataFile + '_' + suffix
+    try:
+        shutil.copyfile(dataFile, duplicateFileName)
+    except IOError, e:
+        # If something went wrong, ignore this file
+        logMessage(logPrefix + ': IOError when creating duplicate' \
+                       + duplicatedFileName)
+        dumpException(e)
+        return []
 
-def resetData(fileDir, fileName, prefix):
+    # Return the new file 
+    return [duplicateFileName]
+
+def resetData(fileDir, fileName, logPrefix, suffix):
     """
-    Given a directory and a file inside it, leave it at zero byte content. The
-    prefix is used to print log messages.
+    Given a directory and a file inside it, removes the file adding the suffix
+    (no longer needed) and leaves the file at zero byte content. The logPrefix
+    is used to print log messages.
     """
+    
+    # Log the execution of this function
+    logMessage(logPrefix + ': resetData ' + fileName)
     
     # If the directory is not present, used disabled the monitoring
     if not os.path.exists(fileDir):
-        logMessage(prefix + ': Disabled. Skipping')
+        logMessage(logPrefix + ': Disabled. Skipping')
         return
 
     # If the file does not exist or its size is zero, terminate
     if (not os.path.exists(fileName)) or (os.path.getsize(fileName) == 0):
         return
 
+    # Remove the duplicated file with the suffix
+    tmpFileName = fileName + '_' + suffix
+    try:
+        logMessage(logPrefix + ': Removing ' + tmpFileName)
+        os.remove(tmpFileName)
+    except OSError, e:
+        # If something went wrong, log
+        logMessage(logPrefix + ': OSError when removing ' + tmpFileName)
+
     # Open/close the file in write mode to reset its content
-    logMessage(prefix + ': Removing ' + fileName)
+    logMessage(logPrefix + ': Resetting ' + fileName)
     fobj = open(fileName, 'w')
     fobj.close()
 
