@@ -1,0 +1,33 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-#
+#
+# Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
+#
+import os, sys
+
+import PLABasic
+
+dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'kdevelop')
+dataFile = os.path.join(dataDir, 'kdeveloplog.txt')
+
+def main(): 
+    """
+    Application to wrap the execution of the kdevelop IDE. Execute it normally
+    and record its invocation.
+    """
+    
+    global dataDir
+    global dataFile
+
+    PLABasic.logMessage("kdevelop: plaDirectory = " + PLABasic.plaDirectory)
+    PLABasic.logMessage("kdevelop: DataDir = " + dataDir)
+    PLABasic.logMessage("kdevelop: DataFile = " + dataFile)
+
+
+    # Modify the first argument to point to the true executable
+    sys.argv[0] = '/usr/bin/kdevelop'
+
+    sys.exit(PLABasic.executeAndLogExecution(dataDir, dataFile, 'kdevelop'))
+
+if __name__ == "__main__":
+    main()
