@@ -1,0 +1,33 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-#
+#
+# Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
+#
+import os, sys
+
+import PLABasic
+
+dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'valgrind')
+dataFile = os.path.join(dataDir, 'valgrindlog.txt')
+
+def main(): 
+    """
+    Application to wrap the execution of valgrind. Execute it normally and
+    record its invocation.
+    """
+    
+    global dataDir
+    global dataFile
+
+    PLABasic.logMessage("valgrind: plaDirectory = " + PLABasic.plaDirectory)
+    PLABasic.logMessage("valgrind: DataFile = " + dataFile)
+
+
+    # Modify the first argument to point to the true executable
+    sys.argv[0] = '--error-exitcode=1'
+    sys.argv.insert(0, '/usr/bin/valgrind')
+
+    sys.exit(PLABasic.executeAndLogExecution(dataDir, dataFile, 'valgrind'))
+
+if __name__ == "__main__":
+    main()

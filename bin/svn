@@ -14,6 +14,12 @@ PLAGdb = imp.load_source('PLAGdb', os.path.join(PLABasic.plaDirectory, 'bin', \
                                                     'gdb'))
 PLAKate = imp.load_source('PLAKate', os.path.join(PLABasic.plaDirectory, 'bin', \
                                                       'kate'))
+PLAKdevelop = imp.load_source('PLAKdevelop', \
+                                  os.path.join(PLABasic.plaDirectory, 'bin', \
+                                                   'kdevelop'))
+PLAValgrind = imp.load_source('PLAValgrind', \
+                                  os.path.join(PLABasic.plaDirectory, 'bin', \
+                                                   'valgrind'))
 
 def main():
     """
@@ -101,10 +107,19 @@ def main():
     ############################################################
     # Valgrind instrumentation
     ############################################################
+    dataFiles.extend(PLABasic.prepareDataFile(PLAValgrind.dataDir,
+                                              PLAValgrind.dataFile,
+                                              'valgrind',
+                                              tarFileName))
 
     ############################################################
     # Kdevelop instrumentation
     ############################################################
+    dataFiles.extend(PLABasic.prepareDataFile(PLAKdevelop.dataDir,
+                                              PLAKdevelop.dataFile,
+                                              'kdevelop',
+                                              tarFileName))
+
 
     ############################################################
     # Kate instrumentation
@@ -189,15 +204,18 @@ def main():
     ############################################################
     # Valgrind reset
     ############################################################
+    PLABasic.resetData(PLAValgrind.dataDir, PLAValgrind.dataFile, 'valgrind', \
+                           tarFileName)
 
     ############################################################
     # Kdevelop reset
     ############################################################
+    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'kdevelop', tarFileName)
 
     ############################################################
     # Kate reset
     ############################################################
-    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'gdb', tarFileName)
+    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'kate', tarFileName)
 
     ############################################################
     # iWatch reset
