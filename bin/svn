@@ -125,8 +125,7 @@ def main():
         sys.exit(originalStatus)
 
     # TGZ all the data files
-    tarFile = os.path.join(svnPLADirectory, \
-                               PLABasic.getUniqueFileName() + '.tgz')
+    tarFile = os.path.join(svnPLADirectory, tarFileName + '.tgz')
     PLABasic.createTarFile(dataFiles, tarFile)
 
     # Fetch the svn client
