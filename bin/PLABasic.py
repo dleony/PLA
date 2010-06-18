@@ -34,6 +34,45 @@ def findPLASVNDataDir(startDir = os.getcwd()):
     # Nothing found
     return None
 
+def executeAndLogExecution(dataDir, dataFile, prefix): 
+    """
+    Application to wrap the execution of a program and dump a file noting its
+    execution in the dataFile.
+    """
+    
+    # Execute the given command normally
+    try:
+        PLABasic.logMessage(prefix + ': executing ' + str(sys.argv))
+        givenCmd = subprocess.Popen(sys.argv)
+    except OSError, e:		  
+        print 'File not found (PLA)'
+        return 0
+    except ValueError, e:
+        print 'Incorrect arguments (PLA)'
+        return 0
+        
+    # Wait for the process to terminate
+    givenCmd.wait()
+
+    # Store the return status to return when the script finishes.
+    originalStatus = givenCmd.returncode
+    PLABasic.logMessage(prefix + ': command status = ' + str(originalStatus))
+
+    # If no file is present in pladirectory, no instrumentation
+    if not os.path.exists(dataDir):
+        PLABasic.logMessage(prefix + ': Disabled. Skipping')
+        return originalStatus
+
+    # Append the captured messages to the file with a separator
+    dataOut = open(dataFile, 'a')
+
+    # Dump a mark status and time/date
+    dataOut.write(str(originalStatus) + ' ' \
+                         + str(datetime.datetime.now())[:-7] + '\n')
+    dataOut.close()
+
+    return originalStatus
+
 def createTarFile(fileList, toFile):
     """
     Creates a tar-gzip-compressed file with name as the second parameter and
@@ -66,11 +105,17 @@ def instrument(dataDir, dataFile, prefix):
 
     # If no file is present in pladirectory, nothing to return
     if not os.path.exists(dataDir):
-        PLABasic.logMessage(prefix + ': Disabled. Skipping')
+        logMessage(prefix + ': Disabled. Skipping')
         return []
 
-    # If the file does not exist or it is empty, done
-    if not os.path.exists(dataFile) or os.path.getsize(dataFile) == 0:
+    # If the file does not exist, done
+    if not os.path.exists(dataFile):
+        logMessage(prefix + ': ' + dataFile + ' not present')
+        return []
+
+    # If the file is empty, done
+    if os.path.getsize(dataFile) == 0:
+        logMessage(prefix + ': Empty data file')
         return []
 
     return [dataFile]

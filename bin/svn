@@ -7,7 +7,11 @@ import os, sys, getopt, locale, pysvn, subprocess, imp
 
 import PLABash, PLABasic
 
-PLAGcc = imp.load_source('PLAGcc', os.path.join(PLABasic.plaDirectory, 'bin', 'gcc'))
+# Load the modules with names without the .py extension
+PLAGcc = imp.load_source('PLAGcc', os.path.join(PLABasic.plaDirectory, 'bin', \
+                                                    'gcc'))
+PLAGdb = imp.load_source('PLAGdb', os.path.join(PLABasic.plaDirectory, 'bin', \
+                                                    'gdb'))
 
 def main():
     """
@@ -111,6 +115,11 @@ def main():
 
     ############################################################
     PLABasic.logMessage('svn: Data files = ' + str(dataFiles))
+
+    # If empty list of data files, terminate
+    if dataFiles == []:
+        PLABasic.logMessage("svn: empty tar file")
+        sys.exit(originalStatus)
 
     # TGZ all the data files
     tarFile = os.path.join(svnPLADirectory, \
