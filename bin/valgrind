@@ -3,7 +3,7 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, sys
+import os, sys, subprocess, datetime
 
 import PLABasic
 
@@ -12,8 +12,8 @@ dataFile = os.path.join(dataDir, 'valgrind')
 
 def main(): 
     """
-    Application to wrap the execution of valgrind. Execute it normally and
-    record its invocation.
+    Application to wrap the execution of valgrind. Executes the program catching
+    stderr and duplicating its content to stderr and to the log file. 
     """
     
     global dataDir
@@ -27,7 +27,51 @@ def main():
     sys.argv[0] = '--error-exitcode=1'
     sys.argv.insert(0, '/usr/bin/valgrind')
 
-    sys.exit(PLABasic.executeAndLogExecution(dataDir, dataFile, 'valgrind'))
+    # sys.exit(PLABasic.executeAndLogExecution(dataDir, dataFile, 'valgrind'))
 
+    # Execute the given command normally
+
+    prefix = 'valgrind'
+    try:
+        PLABasic.logMessage(prefix + ': executing ' + str(sys.argv))
+        givenCmd = subprocess.Popen(sys.argv, stderr = subprocess.PIPE)
+    except OSError, e:		  
+        print 'File not found (PLA)'
+        sys.exit(0)
+    except ValueError, e:
+        print 'Incorrect arguments (PLA)'
+        sys.exit(0)
+        
+    # If no file is present in pladirectory, no instrumentation
+    doLogging = os.path.exists(dataDir)
+    if doLogging:
+        dataOut = open(dataFile, 'a')
+
+        # Dump a mark status and time/date
+        dataOut.write('---- ' \
+                          + str(datetime.datetime.now())[:-7] + ' ' \
+                          + ' '.join(map(lambda x: '\'' + x + '\'', sys.argv)) \
+                          + '\n')
+    else:
+        PLABasic.logMessage(prefix + ': Disabled. Skipping')
+
+    # Loop until the end of stderr of the given command
+    for line in givenCmd.stderr:
+        sys.stderr.write(line)
+        # If logging is enable do it
+        if doLogging:
+            dataOut.write(line)
+        
+    givenCmd.wait()
+    # Store the return status to return when the script finishes.
+    originalStatus = givenCmd.returncode
+    PLABasic.logMessage(prefix + ': command status = ' + str(originalStatus))
+
+    if doLogging:
+        dataOut.write('--- ' + str(originalStatus))
+        dataOut.close()
+
+    sys.exit(originalStatus)
+    
 if __name__ == "__main__":
     main()
