@@ -35,8 +35,7 @@ def main():
     # Wait for the process to terminate
     givenCmd.wait()
 
-    # Original command is execute, store the return status to return when
-    # the script finishes.
+    # Store the return status to return when the script finishes.
     originalStatus = givenCmd.returncode
     PLABasic.logMessage('svn: command status = ' + str(originalStatus))
 
@@ -72,16 +71,23 @@ def main():
     ############################################################
     # Bash instrumentation
     ############################################################
-    dataFiles.extend(PLABash.instrument())
+    dataFiles.extend(PLABasic.instrument(PLABash.dataDir, 
+                                         PLABash.dataFile, 
+                                         'bash'))
 
     ############################################################
     # GCC instrumentation
     ############################################################
-    dataFiles.extend(PLAGcc.instrument())
+    dataFiles.extend(PLABasic.instrument(PLAGcc.dataDir,
+                                         PLAGcc.dataFile,
+                                         'gcc'))
 
     ############################################################
     # GDB instrumentation
     ############################################################
+    dataFiles.extend(PLABasic.instrument(PLAGcc.dataDir,
+                                         PLAGcc.dataFile,
+                                         'gdb'))
 
     ############################################################
     # Valgrind instrumentation
@@ -151,16 +157,17 @@ def main():
     ############################################################
     # Bash reset
     ############################################################
-    PLABash.resetData()
+    PLABasic.resetData(PLABash.dataDir, PLABash.dataFile, 'bash')
 
     ############################################################
     # GCC reset
     ############################################################
-    PLAGcc.resetData()
+    PLABasic.resetData(PLAGcc.dataDir, PLAGcc.dataFile, 'gcc')
 
     ############################################################
     # GDB reset
     ############################################################
+    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'gdb')
 
     ############################################################
     # Valgrind reset
