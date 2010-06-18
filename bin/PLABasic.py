@@ -180,10 +180,18 @@ def resetData(fileDir, fileName, logPrefix, suffix):
 
 def getUniqueFileName():
     """
-    Return a unique file name taking the microseconds from the system.
+    Return a unique file name taking the microseconds from the system and adding
+    five random digits. If two users in the different virtual machines create a
+    file at the same time, they will have the same temporary file and it will
+    collide in the repository. By adding five extra irrelevant digits to the
+    file name the chances of collisions are reduced to appropriate levels.
     """
-    return str(int(time.time() * 1000))
+    # Get disk occupation as seed for pseudo random number generator
+    s = os.statvfs('/')
+    random.seed((s.f_bavail * s.f_frsize) / 1024)
 
+    return str(int(time.time() * 1000)) + '_' + \
+        ''.join([str(random.randint(0, 9)) for n in range(0, 5)])
 
 def logMessage(msg):
     global plaDirectory
