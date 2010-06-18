@@ -19,3 +19,5 @@
 
 * If there is a directory 'test' in $HOME/.pladata the commands print debug info
 
+* If using a graphic environment with icons, check the icons to make sure they
+  execute the right commands.
