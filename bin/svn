@@ -210,12 +210,13 @@ def main():
     ############################################################
     # Kdevelop reset
     ############################################################
-    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'kdevelop', tarFileName)
+    PLABasic.resetData(PLAKdevelop.dataDir, PLAKdevelop.dataFile, 'kdevelop', \
+                           tarFileName)
 
     ############################################################
     # Kate reset
     ############################################################
-    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'kate', tarFileName)
+    PLABasic.resetData(PLAKate.dataDir, PLAKate.dataFile, 'kate', tarFileName)
 
     ############################################################
     # iWatch reset
