@@ -3,7 +3,7 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, sys, tarfile, time, datetime, subprocess, shutil
+import os, sys, tarfile, time, datetime, subprocess, shutil, ramdom
 
 # Directory in user HOME containing the instrumented commands
 plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
