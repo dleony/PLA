@@ -42,6 +42,7 @@ def executeAndLogExecution(dataDir, dataFile, prefix):
     Returns the command status obtained from its execution
     """
     
+    dateBegin = str(datetime.datetime.now())[:-7]
     # Execute the given command normally
     try:
         logMessage(prefix + ': executing ' + str(sys.argv))
@@ -70,6 +71,7 @@ def executeAndLogExecution(dataDir, dataFile, prefix):
 
     # Dump a mark status and time/date
     dataOut.write(str(originalStatus) + ' ' \
+                      + dateBegin + ' ' \
                       + str(datetime.datetime.now())[:-7] + ' ' \
                       + ' '.join(map(lambda x: '\'' + x + '\'', sys.argv)) \
                       + '\n')

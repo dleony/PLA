@@ -32,6 +32,7 @@ def main():
     # Execute the given command normally
 
     prefix = 'valgrind'
+    dateBegin = str(datetime.datetime.now())[:-7]
     try:
         PLABasic.logMessage(prefix + ': executing ' + str(sys.argv))
         givenCmd = subprocess.Popen(sys.argv, stderr = subprocess.PIPE)
@@ -49,6 +50,7 @@ def main():
 
         # Dump a mark status and time/date
         dataOut.write('---- ' \
+                          + dateBegin + ' ' \
                           + str(datetime.datetime.now())[:-7] + ' ' \
                           + ' '.join(map(lambda x: '\'' + x + '\'', sys.argv)) \
                           + '\n')
