@@ -147,11 +147,38 @@ def prepareDataFile(dataDir, dataFile, logPrefix, suffix):
     # Return the new file 
     return [duplicateFileName]
 
-def resetData(fileDir, fileName, logPrefix, suffix):
+def removeTemporaryData(fileDir, fileName, logPrefix, suffix):
     """
-    Given a directory and a file inside it, removes the file adding the suffix
-    (no longer needed) and leaves the file at zero byte content. The logPrefix
-    is used to print log messages.
+    Given a directory and a file inside it, removes the temporary file created
+    """
+    
+    # Name of the temporary file
+    tmpFileName = fileName + '_' + suffix
+
+    # Log the execution of this function
+    logMessage(logPrefix + ': removeTemporaryData ' + tmpFileName)
+    
+    # If the directory is not present, used disabled the monitoring
+    if not os.path.exists(fileDir):
+        logMessage(logPrefix + ': Disabled. Skipping')
+        return
+
+    # If the file does not exist or its size is zero, terminate
+    if not os.path.exists(tmpFileName):
+        return
+
+    # Remove the duplicated file with the suffix
+    try:
+        logMessage(logPrefix + ': Removing ' + tmpFileName)
+        os.remove(tmpFileName)
+    except OSError, e:
+        # If something went wrong, log
+        logMessage(logPrefix + ': OSError when removing ' + tmpFileName)
+
+def resetData(fileDir, fileName, logPrefix):
+    """
+    Given a directory and a file inside it, resets the file leaving its content
+    at zero bytes. The logPrefix is used to print log messages.
     """
     
     # Log the execution of this function
@@ -165,15 +192,6 @@ def resetData(fileDir, fileName, logPrefix, suffix):
     # If the file does not exist or its size is zero, terminate
     if (not os.path.exists(fileName)) or (os.path.getsize(fileName) == 0):
         return
-
-    # Remove the duplicated file with the suffix
-    tmpFileName = fileName + '_' + suffix
-    try:
-        logMessage(logPrefix + ': Removing ' + tmpFileName)
-        os.remove(tmpFileName)
-    except OSError, e:
-        # If something went wrong, log
-        logMessage(logPrefix + ': OSError when removing ' + tmpFileName)
 
     # Open/close the file in write mode to reset its content
     logMessage(logPrefix + ': Resetting ' + fileName)

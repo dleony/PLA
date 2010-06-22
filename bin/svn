@@ -51,6 +51,10 @@ def main():
     originalStatus = givenCmd.returncode
     PLABasic.logMessage('svn: command status = ' + str(originalStatus))
 
+    if originalStatus != 0:
+        PLABasic.logMessage('svn: Terminating due to command failure')
+        sys.exit(0)
+
     # TO BE DONE: How to detect that the command went OK. If a commit failed it
     # might be due to network problems, so the additional commit should not be
     # executed.
@@ -154,6 +158,39 @@ def main():
     tarFile = os.path.join(svnPLADirectory, tarFileName + '.tgz')
     PLABasic.createTarFile(dataFiles, tarFile)
 
+    ############################################################
+    #
+    # REMOVE TEMPORARY FILES
+    #
+    ############################################################
+    PLABasic.removeTemporaryData(PLABash.dataDir,
+                                 PLABash.dataFile,
+                                 'bash',
+                                 tarFileName)
+    PLABasic.removeTemporaryData(PLALast.dataDir,
+                                 PLALast.dataFile,
+                                 'last',
+                                 tarFileName)
+    PLABasic.removeTemporaryData(PLAGcc.dataDir,
+                                 PLAGcc.dataFile,
+                                 'gcc',
+                                 tarFileName)
+    PLABasic.removeTemporaryData(PLAGdb.dataDir,
+                                 PLAGdb.dataFile,
+                                 'gdb',
+                                 tarFileName)
+    PLABasic.removeTemporaryData(PLAValgrind.dataDir,
+                                 PLAValgrind.dataFile,
+                                 'valgrind',
+                                 tarFileName)
+    PLABasic.removeTemporaryData(PLAKdevelop.dataDir,
+                                 PLAKdevelop.dataFile,
+                                 'kdevelop',
+                                 tarFileName)
+    PLABasic.removeTemporaryData(PLAKate.dataDir,
+                                 PLAKate.dataFile,
+                                 'kate',
+                                 tarFileName)
     # Fetch the svn client
     svnClient = pysvn.Client()
     svnClient.exception_style = 1
@@ -165,6 +202,8 @@ def main():
         # Exception when updating, not much we can do, log a message if in
         # debug, and terminate.
         PLABasic.dumpException(e)
+        # Remove tar file, will not be used
+        os.remove(tarFile)
         sys.exit(originalStatus)
     
 
@@ -173,6 +212,8 @@ def main():
         PLABasic.logMessage("svn: add " + tarFile)
         svnClient.add(tarFile)
     except pysvn.ClientError, e:
+        # Remove tar file, will not be used
+        os.remove(tarFile)
         PLABasic.dumpException(e)
 
     # TO BE DONE: Walk over the svnPLADirectory and find files that are NOT
@@ -194,39 +235,37 @@ def main():
     ############################################################
     # Bash reset
     ############################################################
-    PLABasic.resetData(PLABash.dataDir, PLABash.dataFile, 'bash', tarFileName)
+    PLABasic.resetData(PLABash.dataDir, PLABash.dataFile, 'bash')
 
     ############################################################
     # Last reset
     ############################################################
-    PLABasic.resetData(PLALast.dataDir, PLALast.dataFile, 'last', tarFileName)
+    PLALast.resetData()
 
     ############################################################
     # GCC reset
     ############################################################
-    PLABasic.resetData(PLAGcc.dataDir, PLAGcc.dataFile, 'gcc', tarFileName)
+    PLABasic.resetData(PLAGcc.dataDir, PLAGcc.dataFile, 'gcc')
 
     ############################################################
     # GDB reset
     ############################################################
-    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'gdb', tarFileName)
+    PLABasic.resetData(PLAGdb.dataDir, PLAGdb.dataFile, 'gdb')
 
     ############################################################
     # Valgrind reset
     ############################################################
-    PLABasic.resetData(PLAValgrind.dataDir, PLAValgrind.dataFile, 'valgrind', \
-                           tarFileName)
+    PLABasic.resetData(PLAValgrind.dataDir, PLAValgrind.dataFile, 'valgrind')
 
     ############################################################
     # Kdevelop reset
     ############################################################
-    PLABasic.resetData(PLAKdevelop.dataDir, PLAKdevelop.dataFile, 'kdevelop', \
-                           tarFileName)
+    PLABasic.resetData(PLAKdevelop.dataDir, PLAKdevelop.dataFile, 'kdevelop')
 
     ############################################################
     # Kate reset
     ############################################################
-    PLABasic.resetData(PLAKate.dataDir, PLAKate.dataFile, 'kate', tarFileName)
+    PLABasic.resetData(PLAKate.dataDir, PLAKate.dataFile, 'kate')
 
     ############################################################
     # iWatch reset
