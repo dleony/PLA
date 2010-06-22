@@ -5,7 +5,7 @@
 #
 import os, sys, getopt, locale, pysvn, subprocess, imp
 
-import PLABash, PLABasic
+import PLABash, PLALast, PLABasic
 
 # Load the modules with names without the .py extension
 PLAGcc = imp.load_source('PLAGcc', os.path.join(PLABasic.plaDirectory, 'bin', \
@@ -87,6 +87,11 @@ def main():
                                               PLABash.dataFile, 
                                               'bash',
                                               tarFileName))
+
+    ############################################################
+    # Last instrumentation
+    ############################################################
+    dataFiles.extend(PLALast.prepareDataFile(tarFileName))
 
     ############################################################
     # GCC instrumentation
@@ -190,6 +195,11 @@ def main():
     # Bash reset
     ############################################################
     PLABasic.resetData(PLABash.dataDir, PLABash.dataFile, 'bash', tarFileName)
+
+    ############################################################
+    # Last reset
+    ############################################################
+    PLABasic.resetData(PLALast.dataDir, PLALast.dataFile, 'last', tarFileName)
 
     ############################################################
     # GCC reset
