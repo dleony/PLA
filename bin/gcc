@@ -71,7 +71,8 @@ def main():
     gccDataOut.write('-E ' + str(originalStatus) + ' ' \
                          + str(errorLines) + ' ' \
                          + str(outputLines) + ' ' \
-                         + str(datetime.datetime.now())[:-7] + '\n')
+                         + str(datetime.datetime.now())[:-7] \
+                         + ' '.join(sys.argv) + '\n')
     if errorLines != 0:
         gccDataOut.write(str(gccError))
 
