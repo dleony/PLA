@@ -6,8 +6,11 @@
 import os, sys, tarfile, time, datetime, subprocess, shutil, random
 
 # Directory in user HOME containing the instrumented commands
-plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
-                                                    '..'))
+plaDirectory = os.path.expanduser('~/.pladata')
+
+# plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
+#                                                     '..'))
+
 def findPLASVNDataDir(startDir = os.getcwd()):
     """
     Starging in the given a directory, search for a folder with name .pladata
