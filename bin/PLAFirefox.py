@@ -38,6 +38,15 @@ def main():
         
         shutil.copyfile(os.path.join(profileDir, 'places.sqlite'), '/tmp/places.sqlite')
         
+        # Get the timestamp for the last svn commit
+        lastexec_file = os.path.join(PLABasic.plaDirectory, 'tools/.lastexecution')
+        date_clause = ""
+        if (os.path.exists(lastexec_file)):
+            statinfo = os.stat(lastexec_file)
+            init_timestamp = statinfo.st_mtime*1000000
+            date_clause = "AND    visit_date > " + str(int(init_timestamp))
+            print date_clause;
+        
         # Get the last activity from Firefox, through a query to the
         # history table
         
@@ -49,7 +58,7 @@ def main():
           SELECT url, DATETIME(CAST (visit_date/1000000.0 AS INTEGER), 'unixepoch', 'localtime') AS timestamp
           FROM   moz_historyvisits h, moz_places p
           WHERE  h.place_id = p.id
-          AND    visit_date > strftime('%s', '2010-06-21')*1000000
+          """ + date_clause + """
           ORDER  BY visit_date
         """)
 
