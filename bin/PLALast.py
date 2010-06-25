@@ -10,6 +10,8 @@ import PLABasic
 dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'last')
 dataFile = os.path.expanduser('~/.lastrc')
 lastOutput = ''
+logPrefix = 'last'
+
 
 def prepareDataFile(suffix):
     """ 
@@ -22,8 +24,7 @@ def prepareDataFile(suffix):
     global dataDir
     global dataFile
     global lastOutput
-
-    logPrefix = 'last'
+    global logPrefix
 
     # Log the execution of this function
     PLABasic.logMessage(logPrefix + ': prepare ' + dataFile)
@@ -35,8 +36,9 @@ def prepareDataFile(suffix):
 
     # Execute the last command and store its output
     try:
-        PLABasic.logMessage(logPrefix + ': executing /usr/bin/last')
-        givenCmd = subprocess.Popen(['/usr/bin/last'], stdout = subprocess.PIPE)
+        command = ['/usr/bin/ĺast', '-F']
+        PLABasic.logMessage(logPrefix + ': executing ' + ' '.join(command))
+        givenCmd = subprocess.Popen(command, stdout = subprocess.PIPE)
     except OSError, e:		  
         print 'File not found (PLA)'
         return []
@@ -66,6 +68,8 @@ def prepareDataFile(suffix):
         
         # Wait for the process to terminate and get the output
         (theDiff, lastError) = givenCmd.communicate(lastOutput)
+    else:
+        theDiff = lastOutput
 
     # Dump the difference as the data file to send
     dataOut = open(toSendFileName, 'w')
@@ -85,6 +89,8 @@ def resetData():
     """
     The execution of the command "last" needs to be stored in the dataFile.
     """
+    global logPrefix
+
     # Store the output of last in the data file as future reference
     PLABasic.logMessage(logPrefix + ': creating ' + dataFile)
     dataOut = open(dataFile, 'w')
