@@ -38,7 +38,8 @@ def prepareDataFile(suffix):
     try:
         command = ['/usr/bin/ĺast', '-F']
         PLABasic.logMessage(logPrefix + ': executing ' + ' '.join(command))
-        givenCmd = subprocess.Popen(command, stdout = subprocess.PIPE)
+        givenCmd = subprocess.Popen(command, executable = '/usr/bin/last', \
+                                        stdout = subprocess.PIPE)
     except OSError, e:		  
         print 'File not found (PLA)'
         return []
