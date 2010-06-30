@@ -15,7 +15,7 @@ PATHS
 ----------------------
 HISTORY
 ----------------------
-  - Edit the .bashrc and add the following changes
+  - Edit the .bashrc and the .bash_login and add the following changes
 
   unset HISTCONTROL     # Stores all the commands, no exceptions
   HISTFILESIZE=50000    # Huge history file to catch everything
