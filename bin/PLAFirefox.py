@@ -10,9 +10,9 @@ import PLABasic
 dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'firefox')
 dataFile = os.path.join(dataDir, 'firefox')
 
-dateBegin = str(datetime.datetime.now())[:-7]
+_tmpFile = os.path.join('/tmp', 'places.sqlite')
 
-def main(): 
+def prepareDataFile(suffix): 
     """
     Application to wrap the history of the Firefox browser. This
     script should be executed with each svn commit.
@@ -20,71 +20,70 @@ def main():
     
     global dataDir
     global dataFile
+    global _tmpFile
 
-    PLABasic.logMessage("firefox: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("firefox: DataFile = " + dataFile)
+    PLABasic.logMessage('firefox: prepare ' + dataFile)
 
     # If no file is present in pladirectory, no instrumentation
-    doLogging = os.path.exists(dataDir)
-    if doLogging:
-        # Copy the Firefox SQLite database to the tmp directory, in order
-        # to avoid lock issues.
+    if not os.path.exists(dataDir):
+        PLABasic.logMessage('firefox: Disabled. Skipping')
+        return []
+
+    # Copy the Firefox SQLite database to the tmp directory, in order to avoid
+    # lock issues.
         
-        ffoxDir = os.path.join(PLABasic.plaDirectory, '../../.mozilla/firefox/')
+    ffoxDir = os.path.join(PLABasic.plaDirectory, '../../.mozilla/firefox/')
         
-        config = ConfigParser.ConfigParser()
-        config.read(os.path.join(ffoxDir, 'profiles.ini'))
-        profileDir = os.path.join(ffoxDir, config.get('Profile0', 'Path'))
+    # Parse the ffox configuration
+    config = ConfigParser.ConfigParser()
+    config.read(os.path.join(ffoxDir, 'profiles.ini'))
+    profileDir = os.path.join(ffoxDir, config.get('Profile0', 'Path'))
         
-        shutil.copyfile(os.path.join(profileDir, 'places.sqlite'), '/tmp/places.sqlite')
+    sqliteFile = os.path.join(profileDir, 'places.sqlite')
+    PLABasic.logMessage('firefix: duplicating file ' + sqliteFile)
+    shutil.copyfile(sqliteFile, _tmpFile)
         
-        # Get the timestamp for the last svn commit
-        lastexec_file = os.path.join(PLABasic.plaDirectory, 'tools/.lastexecution')
-        date_clause = ""
-        if (os.path.exists(lastexec_file)):
-            statinfo = os.stat(lastexec_file)
-            init_timestamp = statinfo.st_mtime*1000000
-            date_clause = "AND    visit_date > " + str(int(init_timestamp))
-            print date_clause;
+    # Get the timestamp for the last execution
+    lastExecution = PLABasic.getLastExecutionTStamp()
+    date_clause = ''
+    if lastExecution != None:
+        date_clause = "AND    visit_date > " + str(int(lastExecution * 1000000))
         
-        # Get the last activity from Firefox, through a query to the
-        # history table
-        
-        conn = sqlite3.connect('/tmp/places.sqlite')
-        conn.row_factory = sqlite3.Row
+    # Get the last activity from Firefox, through a query to the
+    # history table
+    conn = sqlite3.connect(_tmpFile)
+    conn.row_factory = sqlite3.Row
     
-        c = conn.cursor()
-        c.execute("""
+    c = conn.cursor()
+    query = """
           SELECT url, DATETIME(CAST (visit_date/1000000.0 AS INTEGER), 'unixepoch', 'localtime') AS timestamp
           FROM   moz_historyvisits h, moz_places p
           WHERE  h.place_id = p.id
-          """ + date_clause + """
-          ORDER  BY visit_date
-        """)
+          """ + date_clause + """ ORDER  BY visit_date """
+    PLABasic.logMessage('firefox: Query = ' + query)
+    c.execute(query)
 
-        # Dump a mark status and time/date
-        dataOut = open(dataFile, 'a')
+    # Create a duplicate of the data file with the suffix
+    toSendFileName = dataFile + '_' + suffix
 
-        dataOut.write('---- ' \
-                          + dateBegin + ' ' \
-                          + str(datetime.datetime.now())[:-7] + ' ' \
-                          + ' '.join(map(lambda x: '\'' + x + '\'', sys.argv)) \
-                          + '\n')
+    # Dump the data
+    dataOut = open(toSendFileName, 'w')
+    for row in c:
+        dataOut.write(row['timestamp'] + ' ' + row['url'] + '\n')
         
-        for row in c:
-            dataOut.write('---- ' \
-                          + str(datetime.datetime.now())[:-7] + ' ' \
-                          + ' ' + row['timestamp'] \
-                          + ' ' + row['url'] \
-                          + '\n')
-            
-        c.close()
-            
-        # Remove the profile copy form the tmp directory
-        os.remove('/tmp/places.sqlite')
-            
-    else:
-        PLABasic.logMessage(prefix + ': Disabled. Skipping')
-        
+    # Close the statement and the data file
+    c.close()
+    dataOut.close()
+
+    # Remove the profile copy form the tmp directory
+    os.remove(_tmpFile)
+    
+def main():
+    """
+    Script to store the history of firefox
+    """
+    
+    prepareDataFile('bogus')
+
 if __name__ == "__main__":
     main()
