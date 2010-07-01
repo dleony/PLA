@@ -7,6 +7,7 @@ import os, sys, tarfile, time, datetime, subprocess, shutil, random
 
 # Directory in user HOME containing the instrumented commands
 plaDirectory = os.path.expanduser('~/.pladata')
+stampFileName = os.path.join(plaDirectory, 'tools', '.lastexecution')
 
 # plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
 #                                                     '..'))
@@ -217,18 +218,42 @@ def getUniqueFileName():
         ''.join([str(random.randint(0, 9)) for n in range(0, 5)])
 
 def logMessage(msg):
-    global plaDirectory
     """
     Logging facility, it checks if there is a folder 'test' in the
     plaDirectory. If so, go ahead and log. If not, ignore the message. The test
     directory is supposed to be removed when deployed in the user machine.
     """
 
+    global plaDirectory
+
     if plaDirectory != None and \
             os.path.exists(os.path.join(plaDirectory, 'test')):
         print 'pla-' + msg
 
-                          
+
+def setLastExecutionTStamp():
+    """
+    Return the last time data were collected. It is based on a file the time of
+    which is the last time data was successfully logged.
+    """
+    global stampFileName
+
+    if os.path.exists(stampFileName):
+        os.utime(stampFileName, None)
+    else:
+        open(stempFileName, 'w').close()
+    
+def getLastExecutionTStamp():
+    """
+    Return the mtime of the file left as a mark for the last execution.
+    """
+    global stampFileName
+    
+    if not os.path.exists(stampFileName):
+        return None
+
+    return os.stat(stampFileName).st_mtime
+
 def dumpException(e):
     """
     When an exception appears, its appearance in the screen should be subject to
