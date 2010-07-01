@@ -19,8 +19,7 @@ def main():
     global dataDir
     global dataFile
 
-    PLABasic.logMessage("valgrind: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("valgrind: DataFile = " + dataFile)
+    PLABasic.logMessage('valgrind: preparing ' + dataFile)
 
 
     # Modify the first argument to point to the true executable
