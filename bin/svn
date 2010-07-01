@@ -150,6 +150,7 @@ def svnPostCommit(svnPLADirectory):
     ############################################################
     # Firefox instrumentation
     ############################################################
+    dataFiles.extend(PLAFirefox.prepareDataFile(tarFileName))
 
     ############################################################
     PLABasic.logMessage('svn: Data files = ' + str(dataFiles))
@@ -196,6 +197,10 @@ def svnPostCommit(svnPLADirectory):
                                  PLAKate.dataFile,
                                  'kate',
                                  tarFileName)
+    PLABasic.removeTemporaryData(PLAFirefox.dataDir,
+                                 PLAFirefox.dataFile,
+                                 'firefox',
+                                 tarFileName)
     # Fetch the svn client
     svnClient = pysvn.Client()
     svnClient.exception_style = 1
@@ -220,6 +225,12 @@ def svnPostCommit(svnPLADirectory):
         # Remove tar file, will not be used
         os.remove(tarFile)
         PLABasic.dumpException(e)
+
+    # If the "add" operation has been successfull, we may assume that the data
+    # will eventually reach the server. The following commit could fail, but the
+    # files are already under subversion. As a consequence, update the
+    # footprint.
+    PLABasic.setLastExecutionTStamp()
 
     # TO BE DONE: Walk over the svnPLADirectory and find files that are NOT
     # under version control. It might be due to previous SVN command failures.
@@ -279,7 +290,8 @@ def svnPostCommit(svnPLADirectory):
     ############################################################
     # Firefox reset
     ############################################################
-
+    # Not needed, because the tmp file has been deleted before and the data file
+    # is already taken care of
     return
 
 if __name__ == "__main__":
