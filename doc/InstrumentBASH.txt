@@ -19,5 +19,14 @@ HISTORY
 
   unset HISTCONTROL     # Stores all the commands, no exceptions
   HISTFILESIZE=50000    # Huge history file to catch everything
+  HISTTIMEFORMAT="%F %T "
   Make sure it is the last line manipulating these variables.
+
+----------------------
+LOGIN
+---------------------- 
+
+  - Make sure .bashrc is also read when logging. In .bash_login
+ 
+  source ~/.bashrc
 
