@@ -97,7 +97,7 @@ def createEvent(evType, tstamp, until = None, contextList = [], entityList = [])
     return result
 
 def createEntity(device = None, application = None, itemVersion = None, 
-                 personProfile = None):
+                 item = None, personProfile = None):
     """
     Create an XML element representing an entity. Returns the XML object.
     It expects:
@@ -115,6 +115,8 @@ def createEntity(device = None, application = None, itemVersion = None,
         etree.SubElement(result, 'application', {'id': application })
     if itemVersion != None:
         etree.SubElement(result, 'itemVersion', {'id': itemVersion })
+    if item != None:
+        etree.SubElement(result, 'item', {'id': item })
     if personProfile != None:
         etree.SubElement(result, 'personProfile', {'id': personProfile })
     
@@ -269,9 +271,11 @@ def writeElements():
         root.append(el)
 
     toWrite = etree.ElementTree(root)
-    toWrite.write('elements.xml', encoding = 'utf-8', xml_declaration = True,
+    fileName = 'elements.xml'
+    toWrite.write(fileName, encoding = 'utf-8', xml_declaration = True,
                   method = 'xml', pretty_print = True)
     
+    return fileName
     
 if __name__ == "__main__":
     main()
