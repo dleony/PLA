@@ -446,7 +446,9 @@ def toolProcessGcc(userName, sessions):
                 # And add the event to the session
                 sessions[index][2][event.get('id')] = event
                 
-                msgEvents = filterGccMsgs(errorText + outputText)
+                # Add the events derived from processing the output/error msgs
+                for msgevent in filterGccMsgs(errorText + outputText):
+                    sessions[index][2][msgevent.get('id')] = msgevent
 
                 # Reset all flags
                 inError = False
@@ -818,7 +820,7 @@ def filterGccMsgs(text):
     is a catalog of regular expressions to catch some common mistakes.
     """
     # To be implemented
-    pass
+    return []
 
 def dbg(msg):
     """
