@@ -5,7 +5,7 @@
 #
 import os, sys, getopt, locale, pysvn, subprocess, imp
 
-import PLABash, PLALast, PLABasic
+import PLABash, PLALast, PLAFirefox, PLABasic
 
 # Load the modules with names without the .py extension
 PLAGcc = imp.load_source('PLAGcc', os.path.join(PLABasic.plaDirectory, 'bin', \
