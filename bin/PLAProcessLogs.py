@@ -4,10 +4,13 @@
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
 import os, sys, tarfile, getopt, pysvn, re, shutil, subprocess, datetime, glob
+import codecs
 
 from lxml import etree
 
 import PLACamOutput
+
+_rdfNS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
 
 # Directory in user HOME containing the instrumented commands
 plaDirectory = os.path.expanduser('~/.pladata')
@@ -15,8 +18,6 @@ plaDirectory = os.path.expanduser('~/.pladata')
 # Default options
 _debug = False
 _givenUserSet = set([])
-_givenToolSet = set(['bash', 'last', 'gcc', 'gdb', 'valgrind', 'kate', \
-                         'kdevelop'])
 
 # Regular expression to filter log files
 _logFileFilter = re.compile('.+\.tgz')
@@ -32,8 +33,6 @@ def main():
 
     -u username Select only this username (it might appear several times)
  
-    -t toolname Select only this tool
-
     The svnDirectory should be .pladata where the *.tgz files are stored.
 
     """
@@ -41,7 +40,6 @@ def main():
     global _debug
     global _logFileFilter
     global _givenUserSet
-    global _givenToolSet
 
     # Swallow the options
     try:
@@ -58,8 +56,6 @@ def main():
             _debug = True
         elif optstr == '-u':
             _givenUserSet.add(value)
-        elif optstr == '-t':
-            _givenToolSet.add(value)
 
     dbg('Checking if the argument is correctly given')
 
@@ -83,6 +79,7 @@ def main():
     initialDir = os.getcwd()
 
     # Loop over the given dirs
+    createdFiles = []
     for dirName in args:
 
         # Change to the given directory
@@ -113,10 +110,13 @@ def main():
             toolProcess(userName, sessions)
 
             # Write data into session files
-            writeSessionFile(userName, sessions)
+            createdFiles.extend(writeSessionFile(userName, sessions))
 
         # Dump the addittional elements stored in the Cam Output
-        PLACamOutput.writeElements()
+        createdFiles.append(PLACamOutput.writeElements())
+
+        # Create a RDF file including all the generated files
+        writeMasterRDFFile(createdFiles)
 
         # Restore initialDir
         os.chdir(initialDir)
@@ -208,42 +208,38 @@ def obtainSessions(userDir):
     """
 
     dbg('Obtaining Sessions for ' + userDir)
-    sessionDir = os.path.join(userDir, 'sessions')
-
-    # Create the "Sessions" directory to store the sessions
-    if not os.path.exists(sessionDir):
-        dbg(' Created ' + sessionDir)
-        os.makedirs(sessionDir)
 
     # Obtain the the filees with the "last" data
     lastFiles = glob.glob(os.path.join(userDir, 'home', 'teleco', '.lastrc') + 
                           '_[0-9]*_[0-9]*')
-    lastFiles.sort()
-                     
-    # Create a duplicate of the first file which is the output of last directly
-    mainLastFile = os.path.join(sessionDir, 'last')
-    shutil.copy(lastFiles.pop(0), mainLastFile)
 
-    # Apply the remaining files as patches
-    lastFiles.sort()
-    for file in lastFiles:
-        try:
-            command = ['patch', '-s', mainLastFile, file]
-            dbg(' Patching with ' + ' '.join(command))
-            patchCmd = subprocess.Popen(command)
-        except:
-            print('Failed to apply patch ' + file)
-            sys.exit(1)
-            
-        # Wait for the patch to be applied
-        patchCmd.wait()
-            
-        if patchCmd.returncode != 0:
-            print('Patch returned status ' + patchCmd.returncode)
-            sys.exit(1)
+    # Process all lines in all files
+    sessionLines = set([])
+    for sessionfile in lastFiles:
 
-    # LAST file produced, proceed to parse and create session files
-    return parseLastFile(mainLastFile, userDir)
+        # Detect spurious files left by other tools
+        if not re.match('.+\.lastrc_[0-9]+_[0-9]+$', sessionfile):
+            dbg('Discarding file ' + sessionfile)
+            continue
+
+        # Loop for every line in session file
+        dataIn = open(sessionfile, 'r')
+        for line in dataIn:
+
+            # Skip lines with no data
+            if line.startswith('reboot') or line == '\n' or \
+                    line.startswith('wtmp') or \
+                    (line.find('no logout') != -1) or \
+                    (line.find('still logged') != -1) or \
+                    (line.find('down') != -1):
+                continue
+            
+            # Add it to the set (repeated lines are ignored)
+            sessionLines.add(line[:-1].strip())
+        dataIn.close()
+
+    # Proceed to parse all lines and create session data
+    return parseLastFile(sessionLines, userDir)
 
 def toolProcess(userName, sessions):
     """
@@ -251,6 +247,8 @@ def toolProcess(userName, sessions):
     """
 
     toolProcessBash(userName, sessions)
+
+    toolProcessGcc(userName, sessions)
 
     toolProcessLog('kate', userName, sessions)
 
@@ -297,16 +295,10 @@ def toolProcessBash(userName, sessions):
                 continue
 
             # Find to which file this session belongs
-            index = next((i for i in xrange(len(sessions)) \
-                              if sessions[i][1][0] < stamp and \
-                              (sessions[i][1][1] == None or \
-                                   sessions[i][1][1] > stamp)), None)
+            index = locateEventInSession(session, stamp)
             
-            # If the command does not belong to any session, dumpt it
-            if index == None:
-                print 'Discarding command ' + line[:-1]
-                continue
-
+            # Create the appropriate event and insert it in the proper bucket of
+            # the sessions list.
             counter = counter + 1
             person = PLACamOutput.createPerson(os.path.basename(userName))
             profile = PLACamOutput.createPersonProfile('vmwork', person)
@@ -318,8 +310,7 @@ def toolProcessBash(userName, sessions):
                                                application = 'bash',
                                                itemVersion = itemV)
             
-            context = PLACamOutput.createContext(
-                session = sessions[index][3])
+            context = PLACamOutput.createContext(session = sessions[index][3])
 
             event = PLACamOutput.createEvent(
                 PLACamOutput.EventTypes.OtherCommand, stamp,
@@ -330,6 +321,150 @@ def toolProcessBash(userName, sessions):
         
         dbg('  Added ' + str(counter) + ' new commands.')
         dataFile.close()
+
+def toolProcessGcc(userName, sessions):
+    """
+    Given the events logged by the compiler, create the appropriate event
+    
+    <event type='Gcc' datetime=DATE BEGIN>
+      <entity>
+        <application>gcc-output</application>
+        <personProfile id="vmwork" personId="REF TO USER"/>
+        <item id="??">
+      </entity>
+      <entity>
+        <application>gcc-error</application>
+        <personProfile id="vmwork" personId="REF TO USER"/>
+        <item id="??">
+      </entity>
+      <context>
+        <session id="session Id"/>
+      </context>
+    </event>
+
+    <event type="gccmsg" datetime=DATE BEGIN>
+      <entity>
+        <application>gcc</application>
+        <item>TEXT</item>
+      </entity>
+      <context>
+        <session id="GCC EVENT ID"/>
+      </context>
+    </event>
+    <item id="a">
+    All the text in the command output
+    </item>
+    <item id="b">
+    All the text in the command error
+    </item>
+    <item id="msg>
+     One message by the compiler
+    </item>
+    """
+
+    # Obtain the files with the gcc history data
+    dataDir = os.path.join(userName, 'home', 'teleco', '.pladata', 'tools', 
+                           'gcc')
+    dataFiles = glob.glob(os.path.join(dataDir, 'gcc') + '_[0-9]*_[0-9]*')
+    dataFiles.sort()
+    
+    dbg('Processing gcc data files')
+
+    # Loop over all the gcc files
+    for dataFileName in dataFiles:
+        dbg(' ' + dataFileName)
+        dataFile = codecs.open(dataFileName, 'r', 'utf-8')
+
+        counter = 0
+        errorText = ''
+        outputText = ''
+        inError = False
+        inOutput = False
+        dateEvent = None
+        command = None
+        lineNumber = 1
+        # Loop over all the lines in the file
+        for line in dataFile:
+            
+            # Beginning of log (and error message)
+            if re.match('^\-BEGIN .+$', line):
+                # Beginning of log
+                inError = True
+                inOutput = False
+                fields = line.split()
+                dateEvent = datetime.datetime.strptime(' '.join(fields[4:6]),
+                                                       '%Y-%m-%d %H:%M:%S')
+                command = ' '.join(fields[6:])
+
+                # Find to which file this session belongs
+                index = locateEventInSession(sessions, dateEvent)
+
+                continue
+
+            # Beginning of output message
+            if re.match('^\-O .+$', line):
+                inError = False
+                inOutput = True
+                continue
+
+            if re.match('^\-END$', line):
+
+                # Create the different event elements
+                person = PLACamOutput.createPerson(os.path.basename(userName))
+                profile = PLACamOutput.createPersonProfile('vmwork', person)
+
+                # Create the entity stating that the command executed
+                commandItem = PLACamOutput.createItem(None, text = command)
+
+                entities = [PLACamOutput.createEntity(personProfile = profile,
+                                                      application = 'gcc',
+                                                      item = commandItem)]
+
+                # Create the two possible entities with output and error msgs
+                if errorText != '':
+                    errorItem = PLACamOutput.createItem(None, text = errorText)
+                    entities.append(\
+                        PLACamOutput.createEntity(personProfile = profile,
+                                                  application = 'gcc-error',
+                                                  item = errorItem))
+                outputEntity = []
+                if outputText != '':
+                    outputItem = PLACamOutput.createItem(None, text = outputText)
+                    entities.append(\
+                        PLACamOutput.createEntity(personProfile = profile,
+                                                  application = 'gcc-output',
+                                                  item = outputItem))
+
+                # The context
+                context = PLACamOutput.createContext(sessions[index][3])
+
+                # And the event
+                event = PLACamOutput.createEvent(PLACamOutput.EventTypes.Gcc, \
+                                                     dateEvent, \
+                                                     entityList = entities, \
+                                                     contextList = [context])
+                # And add the event to the session
+                sessions[index][2][event.get('id')] = event
+                
+                msgEvents = filterGccMsgs(errorText + outputText)
+
+                # Reset all flags
+                inError = False
+                inOutput = False
+                dateEvent = None
+                command = None
+
+                continue
+
+            # Regular line
+            if inError:
+                errorText += line
+            elif inOutput:
+                outputText += line
+            else:
+                print 'line ' + str(lineNumber) + ' inconsistent in ' + \
+                    dataFileName
+                sys.exit(2)
 
 def toolProcessLog(prefix, userName, sessions):
     """
@@ -365,7 +500,6 @@ def toolProcessLog(prefix, userName, sessions):
         dbg('  ' + dataFileName)
         dataFile = open(dataFileName, 'r')
 
-
         counter = 0
         # Loop over all the lines
         for line in dataFile:
@@ -379,11 +513,8 @@ def toolProcessLog(prefix, userName, sessions):
                                                   
 
             # Find to which file this session belongs
-            index = next((i for i in xrange(len(sessions)) \
-                              if sessions[i][1][0] < dateBegin and \
-                              (sessions[i][1][1] == None or \
-                                   sessions[i][1][1] > dateEnd)), None)
-            
+            index = locateEventInSession(sessions, dateBegin, dateEnd)
+
             # If the session is not detected discard command
             if index == None:
                 print 'Discarding command ' + line[:-1]
@@ -415,25 +546,25 @@ def toolProcessLog(prefix, userName, sessions):
         dbg('  Added ' + str(counter) + ' new commands.')
         dataFile.close()
 
-def parseLastFile(lastFile, userDir):
+def parseLastFile(sessionLines, userDir):
     """
-    Given the file containing the dump by the last command parse its content and
-    creates as many session files at the same level as detected.
+    Given a set of lines from the last command parse its content and creates as
+    many session files at the same level as detected.
 
     Return a list of tuples with the following structure:
 
-    (filename, [date from, date two], Dict[id] = element)
+    (filename, [date from, date two], Dict[id] = element, session element)
 
-    The idea is to parse the log files, populate the empty set to contain all
-    the events to be added to the file, and add them in one shot (open, parse,
-    write, close)
+    The idea is to parse these lines, populate the empty set to contain all the
+    events to be added to the file, and add them in one shot (open, parse,
+    write, close) in a single call afterwards.
     """
-    dbg(' Parsing ' + lastFile)
+
+    dbg(' Parsing sessionlines')
     
     # Open and loop over each line in the data file
-    dataIn = open(lastFile, 'r')
-    dates = []
-    for line in dataIn:
+    sessions = []
+    for line in sessionLines:
 
         # Skip lines with no data
         if line.startswith('reboot') or line == '\n' or \
@@ -459,12 +590,17 @@ def parseLastFile(lastFile, userDir):
             continue
 
         # Skipping lines with no second date nor "still logged" message
-        if sessionDates[1] == None and (line.find('still logged') != -1):
+        if sessionDates[1] == None and (line.find('still logged') == -1):
             continue
 
         # Skip the sessions that have an empty duration
         if sessionDates[0] == sessionDates[1]:
             dbg(' Skipping empty session')
+            continue
+
+        # Skip the sessions with reversed dates
+        if sessionDates[0] > sessionDates[1]:
+            dbg(' Skipping reversed session')
             continue
 
         # Decide the name of the session file
@@ -474,8 +610,7 @@ def parseLastFile(lastFile, userDir):
             nameEnd = sessionDates[1].strftime('%Y%m%d%H%M%S' + '.xml')
 
         # Create the data structure with the basic session information
-        sessionDataFileName = os.path.join(os.path.dirname(lastFile),
-                                           nameStart + '_' + nameEnd)
+        sessionDataFileName = nameStart + '_' + nameEnd
 
         # Session events containing session begin, session end
         person = PLACamOutput.createPerson(os.path.basename(userDir))
@@ -500,38 +635,47 @@ def parseLastFile(lastFile, userDir):
             contextList = [context])
 
         # Insert the data for the session
-        dates.append((sessionDataFileName, sessionDates, 
-                      PLACamOutput.insertElements({},
-                                                  [eventStart, 
-                                                   eventEnd]), sessionElement))
-    dataIn.close()
+        sessions.append((sessionDataFileName, sessionDates, 
+                         PLACamOutput.insertElements({},
+                                                     [eventStart, 
+                                                      eventEnd]), sessionElement))
 
-    return dates
+    # Add an extra entry to catch events that do not fall in any of the sessions
+    sessions.append(('EventsInNoSession.xml', [None, None], {}, None))
 
-def writeSessionFile(userName, sessions):
+    return sessions
+
+def writeSessionFile(userDir, sessions):
     """
     For each session in the list, create a file for those with non empty data
     """
-    
+
+    global _rdfNS
+
     dbg('Writing session files')
 
-    # Remove those files that terminate in StillLogged because they contain
-    # temporary data
-    toRemove = glob.glob(os.path.join(userName, 'sessions', '*StillLogged'))
-    if toRemove != []:
-        dbg('Removing ' + ', '.join(toRemove))
-        map(os.remove, toRemove)
+    # Create the "Sessions" directory to store the sessions
+    sessionDir = os.path.join(userDir, 'sessions')
+    if not os.path.exists(sessionDir):
+        dbg(' Created ' + sessionDir)
+        os.makedirs(sessionDir)
+
+    # Start from scratch
+    dbg('Removing session files in the directory')
+    map(os.remove, glob.glob(os.path.join(sessionDir, '*.xml')))
 
     # Loop over all the session
+    fileNames = []
     for session in sessions:
 
-        dbg('Write session ' + session[0] + ' with ' + \
+        if len(session[2]) == 0:
+            dbg('Empty session ' + session[0])
+            continue
+
+        dbg('Session file ' + session[0] + ' with ' + \
                 str(len(session[2])) + ' events')
 
-        NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
-        TREE = '{%s}' % NS
-        NSMAP = {None: NS}
-        root = etree.Element(TREE + 'rdf', nsmap = {None: NS})
+        root = createRootElement('rdf', _rdfNS)
         root.append(etree.Comment('File automatically generated by PLA'))
 
         # Add each event to the root
@@ -541,9 +685,42 @@ def writeSessionFile(userName, sessions):
             root.append(elem)
 
         toWrite = etree.ElementTree(root)
-        toWrite.write(session[0], encoding='utf-8', xml_declaration = True, 
+        fileName = os.path.join(sessionDir, session[0])
+        toWrite.write(fileName, encoding='utf-8', xml_declaration = True, 
                       method = 'xml', pretty_print = True)
+        fileNames.append(fileName)
 
+    return fileNames
+
+def writeMasterRDFFile(createdFiles):
+    """
+    Given a set of RDF file names each of them containing a set of events,
+    create a file which includes all these events.
+    """
+
+    global _rdfNS
+    
+    dbg('Writing master file')
+
+    # Xinclude namespace 
+    XITREE = '{http://www.w3.org/2001/XInclude}'
+
+    # Create the root element
+    root = createRootElement('rdf', _rdfNS,
+                             [('xi', 'http://www.w3.org/2001/XInclude')])
+    root.append(etree.Comment('File automatically generated by PLA'))
+
+    # Loop over all the created files
+    for filename in createdFiles:
+        root.append(etree.Element(XITREE + 'include',
+                                  {'href' : filename,
+                                   'xpointer' : 'xpointer(/*/node())'}))
+
+    toWrite = etree.ElementTree(root)
+    fileName = 'master.xml'
+    toWrite.write(fileName, encoding='utf-8', xml_declaration = True, 
+                  method = 'xml', pretty_print = True)
+        
         
 def extractDates(fields):
     """
@@ -594,12 +771,54 @@ def filterUsers():
             _givenUserSet = intersect
     return
 
+def createRootElement(rootname, nsUrl, otherNSUrl = []):
+    """
+    Creates the root element of an XML file. 
+
+    rootname: name of the root element
+    nsUrl: The URL of the main namespace
+    otherNSUrl: list of pairs (prefix, url) for additional namespaces
+    """
+    TREE = '{%s}' % nsUrl
+    NSMAP = {None: nsUrl}
+    
+    # Add the additional namespaces to the dictionary
+    for (pr, url) in otherNSUrl:
+        NSMAP[pr] = url
+
+    return etree.Element(TREE + rootname, nsmap = NSMAP)
+    
+    
 def getSessionIdFromName(name):
     """
     Given the name of a file containing a session, guess the Id of that session
     """
 
     return 'SessionStart_' + name.split('_')[0]
+
+
+def locateEventInSession(sessions, stamp, tend = None):
+    """
+    Given a time stamp and a list of tuples (sessionfile, [dateBegin, dateEnd],
+    .....) decide in which of the [dateBegin, dateEnd] can be included. The
+    first one is returned.
+    """
+    if tend == None:
+        tend = stamp
+    
+    return next((i for i in xrange(len(sessions)) \
+                     if (sessions[i][1][0] == None or \
+                             sessions[i][1][0] <= stamp) and \
+                     (sessions[i][1][1] == None or \
+                          sessions[i][1][1] >= tend)), None)
+
+def filterGccMsgs(text):
+    """
+    Given a set of lines produced by the compiler, create events from them. This
+    is a catalog of regular expressions to catch some common mistakes.
+    """
+    # To be implemented
+    pass
 
 def dbg(msg):
     """
