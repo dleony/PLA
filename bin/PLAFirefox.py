@@ -31,8 +31,7 @@ def prepareDataFile(suffix):
 
     # Copy the Firefox SQLite database to the tmp directory, in order to avoid
     # lock issues.
-        
-    ffoxDir = os.path.join(PLABasic.plaDirectory, '../../.mozilla/firefox/')
+    ffoxDir = os.path.expanduser('~/.mozilla/firefox/')
         
     # Parse the ffox configuration
     config = ConfigParser.ConfigParser()
@@ -40,7 +39,7 @@ def prepareDataFile(suffix):
     profileDir = os.path.join(ffoxDir, config.get('Profile0', 'Path'))
         
     sqliteFile = os.path.join(profileDir, 'places.sqlite')
-    PLABasic.logMessage('firefix: duplicating file ' + sqliteFile)
+    PLABasic.logMessage('firefox: duplicating file ' + sqliteFile)
     shutil.copyfile(sqliteFile, _tmpFile)
         
     # Get the timestamp for the last execution
@@ -63,6 +62,10 @@ def prepareDataFile(suffix):
     PLABasic.logMessage('firefox: Query = ' + query)
     c.execute(query)
 
+    # If nothing is selected, we are done
+    if c.rowcount <= 0:
+        return []
+
     # Create a duplicate of the data file with the suffix
     toSendFileName = dataFile + '_' + suffix
 
@@ -77,7 +80,8 @@ def prepareDataFile(suffix):
 
     # Remove the profile copy form the tmp directory
     os.remove(_tmpFile)
-    
+
+    return [toSendFileName]
 def main():
     """
     Script to store the history of firefox
