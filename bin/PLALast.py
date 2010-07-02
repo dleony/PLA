@@ -9,7 +9,6 @@ import PLABasic
 
 dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'last')
 dataFile = os.path.expanduser('~/.lastrc')
-lastOutput = ''
 logPrefix = 'last'
 
 
@@ -23,7 +22,6 @@ def prepareDataFile(suffix):
 
     global dataDir
     global dataFile
-    global lastOutput
     global logPrefix
 
     # Log the execution of this function
@@ -34,12 +32,16 @@ def prepareDataFile(suffix):
         PLABasic.logMessage(logPrefix + ': Disabled. Skipping')
         return []
 
+    # Prepare the file to catch the output of the last command
+    toSendFileName = dataFile + '_' + suffix
+    dataOut = open(toSendFileName, 'w')
+
     # Execute the last command and store its output
     try:
         command = ['/usr/bin/ĺast', '-F']
         PLABasic.logMessage(logPrefix + ': executing ' + ' '.join(command))
         givenCmd = subprocess.Popen(command, executable = '/usr/bin/last', \
-                                        stdout = subprocess.PIPE)
+                                        stdout = dataOut)
     except OSError, e:		  
         print 'File not found (PLA)'
         return []
@@ -48,33 +50,9 @@ def prepareDataFile(suffix):
         return []
 
     # Wait for the process to terminate and get the output
-    (lastOutput, lastError) = givenCmd.communicate()
+    givenCmd.wait()
 
-    # Create a duplicate of the data file with the suffix
-    toSendFileName = dataFile + '_' + suffix
-
-    # If the data file exist, create tmp file with the diff
-    if os.path.exists(dataFile):
-        try:
-            PLABasic.logMessage(logPrefix + ': executing /usr/bin/diff')
-            givenCmd = subprocess.Popen(['/usr/bin/diff', dataFile, '-'], \
-                                            stdin = subprocess.PIPE,
-                                            stdout = subprocess.PIPE)
-        except OSError, e:		  
-            print 'File not found (PLA)'
-            return []
-        except ValueError, e:
-            print 'Incorrect arguments (PLA)'
-            return []
-        
-        # Wait for the process to terminate and get the output
-        (theDiff, lastError) = givenCmd.communicate(lastOutput)
-    else:
-        theDiff = lastOutput
-
-    # Dump the difference as the data file to send
-    dataOut = open(toSendFileName, 'w')
-    dataOut.write(theDiff)
+    # Close the data
     dataOut.close()
 
     # If the file is empty, done
@@ -85,18 +63,6 @@ def prepareDataFile(suffix):
 
     # Return the new file 
     return [toSendFileName]
-
-def resetData():
-    """
-    The execution of the command "last" needs to be stored in the dataFile.
-    """
-    global logPrefix
-
-    # Store the output of last in the data file as future reference
-    PLABasic.logMessage(logPrefix + ': creating ' + dataFile)
-    dataOut = open(dataFile, 'w')
-    dataOut.write(lastOutput)
-    dataOut.close()
 
 def main(): 
     """
