@@ -241,7 +241,7 @@ def setLastExecutionTStamp():
     if os.path.exists(stampFileName):
         os.utime(stampFileName, None)
     else:
-        open(stempFileName, 'w').close()
+        open(stampFileName, 'w').close()
     
 def getLastExecutionTStamp():
     """
