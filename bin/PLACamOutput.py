@@ -17,8 +17,8 @@ _elements = {}
 
 # Event enumeration
 class EventTypes:
-    SessionStart, SessionEnd, OtherCommand, Gcc, Gdb, Kate, \
-        Kdevelop, Valgrind = range(8)
+    SessionStart, SessionEnd, OtherCommand, Gcc, GccMsg, Gdb, Kate, \
+        Kdevelop, Valgrind = range(9)
 
 def eventName(value):
     if value == EventTypes.SessionStart:
@@ -29,6 +29,8 @@ def eventName(value):
         return 'OtherCommand'
     elif value == EventTypes.Gcc:
         return 'Gcc'
+    elif value == EventTypes.GccMsg:
+        return 'GccMsg'
     elif value == EventTypes.Gdb:
         return 'Gdb'
     elif value == EventTypes.Kate:
@@ -67,7 +69,8 @@ def main():
     thetree.write('crap.xml', encoding = 'unicode', xml_declaration = True,
                   method = 'xml', pretty_print = True)
 
-def createEvent(evType, tstamp, until = None, contextList = [], entityList = []):
+def createEvent(evType, tstamp, until = None, name = None, contextList = [], 
+                entityList = []):
     """
     Create an XML element representing an event. Returns the XML object
 
@@ -75,6 +78,7 @@ def createEvent(evType, tstamp, until = None, contextList = [], entityList = [])
     evType: Enum
     tstamp: datetime object
     until : datetime object
+    name : string
     contextList: List of context elements
     entityList: List of entity elements
     """
@@ -85,6 +89,10 @@ def createEvent(evType, tstamp, until = None, contextList = [], entityList = [])
     if tstamp == None:
         tstamp = datetime.datetime.now()
     result.attrib['datetime'] = tstamp.strftime('%Y-%m-%d %H:%M:%S')
+    if until != None:
+        result.attrib['until'] = until.strftime('%Y-%m-%d %H:%M:%S')
+    if name != None:
+        result.attrib['name'] = name
 
     for el in contextList + entityList:
         result.append(el)

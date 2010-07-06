@@ -8,7 +8,7 @@ import codecs
 
 from lxml import etree
 
-import PLACamOutput
+import PLACamOutput, PLAGccMessages
 
 _rdfNS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
 
@@ -436,7 +436,7 @@ def toolProcessGcc(userName, sessions):
                                                   item = outputItem))
 
                 # The context
-                context = PLACamOutput.createContext(sessions[index][3])
+                context = PLACamOutput.createContext(session = sessions[index][3])
 
                 # And the event
                 event = PLACamOutput.createEvent(PLACamOutput.EventTypes.Gcc, \
@@ -447,7 +447,8 @@ def toolProcessGcc(userName, sessions):
                 sessions[index][2][event.get('id')] = event
                 
                 # Add the events derived from processing the output/error msgs
-                for msgevent in filterGccMsgs(errorText + outputText):
+                for msgevent in filterGccMsgs(event.get('id'), dateEvent,
+                                              errorText + outputText):
                     sessions[index][2][msgevent.get('id')] = msgevent
 
                 # Reset all flags
@@ -813,14 +814,6 @@ def locateEventInSession(sessions, stamp, tend = None):
                              sessions[i][1][0] <= stamp) and \
                      (sessions[i][1][1] == None or \
                           sessions[i][1][1] >= tend)), None)
-
-def filterGccMsgs(text):
-    """
-    Given a set of lines produced by the compiler, create events from them. This
-    is a catalog of regular expressions to catch some common mistakes.
-    """
-    # To be implemented
-    return []
 
 def dbg(msg):
     """
