@@ -108,7 +108,7 @@ def filterGccMsgs(sessionId, dateEvent, text):
 
     # Parse line by line and detect patterns
     counter = 1
-    for line in text:
+    for line in text.splitlines():
         index = next((a for a in range(len(_msgs)) if _msgs[a][1].search(line)), 
                      None)
         if index == None:
@@ -129,8 +129,6 @@ def filterGccMsgs(sessionId, dateEvent, text):
                                                 contextList = [context]))
         counter += 1
 
-    print result
-                      
     return result
 
 if __name__ == "__main__":

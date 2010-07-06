@@ -399,6 +399,7 @@ def toolProcessGcc(userName, sessions):
                 # Find to which file this session belongs
                 index = locateEventInSession(sessions, dateEvent)
 
+                dbg(' Detected begin of GCC session')
                 continue
 
             # Beginning of output message
@@ -409,6 +410,7 @@ def toolProcessGcc(userName, sessions):
 
             if re.match('^\-END$', line):
 
+                dbg(' Detected end of GCC session')
                 # Create the different event elements
                 person = PLACamOutput.createPerson(os.path.basename(userName))
                 profile = PLACamOutput.createPersonProfile('vmwork', person)
@@ -447,8 +449,8 @@ def toolProcessGcc(userName, sessions):
                 sessions[index][2][event.get('id')] = event
                 
                 # Add the events derived from processing the output/error msgs
-                for msgevent in filterGccMsgs(event.get('id'), dateEvent,
-                                              errorText + outputText):
+                for msgevent in PLAGccMessages.filterGccMsgs(event.get('id'), dateEvent,
+                                                            errorText + outputText):
                     sessions[index][2][msgevent.get('id')] = msgevent
 
                 # Reset all flags
