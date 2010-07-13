@@ -223,7 +223,7 @@ def obtainSessions(userDir):
             continue
 
         # Loop for every line in session file
-        dataIn = open(sessionfile, 'r')
+        dataIn = codecs.open(sessionfile, 'r', 'utf-8')
         for line in dataIn:
 
             # Skip lines with no data
@@ -253,6 +253,8 @@ def toolProcess(userName, sessions):
     toolProcessGdb(userName, sessions)
 
     toolProcessValgrind(userName, sessions)
+
+    toolProcessFirefox(userName, sessions)
 
     toolProcessLog('kate', userName, sessions)
 
@@ -287,7 +289,7 @@ def toolProcessBash(userName, sessions):
     # Loop over all the bash files
     for historyFileName in historyFiles:
         dbg('  ' + historyFileName)
-        dataFile = open(historyFileName, 'r')
+        dataFile = codecs.open(historyFileName, 'r', 'utf-8')
 
         stamp = datetime.datetime.fromtimestamp(os.stat(historyFileName).st_mtime)
         counter = 0
@@ -669,6 +671,73 @@ def toolProcessValgrind(userName, sessions):
             # Regular line
             outputText += line
 
+def toolProcessFirefox(userName, sessions):
+    """
+    Given the user and the session files, parse the events in the firefox file
+    and add them to the corresponding session
+
+    <event id = ??
+           datetime = given>
+      <entity>
+        <application>firefox</application>
+        <personProfile id="vmwork"/>
+        <item type="firefox-visit">url</item>
+      </entity>
+      <context>
+        <session id="session Id"/>
+      </context>
+    </event>
+    """
+    
+    # Obtain the the files with the bash history data
+    dataDir = os.path.join(userName, 'home', 'teleco', '.pladata', 'tools', 
+                           'firefox')
+    dataFiles = glob.glob(os.path.join(dataDir, 'firefox') + '_[0-9]*_[0-9]*')
+    dataFiles.sort()
+    
+    dbg('Processing firefox data files')
+
+    # Loop over all the bash files
+    for dataFileName in dataFiles:
+        dbg('  ' + dataFileName)
+        dataFile = codecs.open(dataFileName, 'r', 'utf-8')
+
+        counter = 0
+        # Loop over all the lines
+        for line in dataFile:
+            
+            fields = line.split()
+            dateEvent = datetime.datetime.strptime(' '. join(fields[0:2]),
+                                                   '%Y-%m-%d %H:%M:%S')
+            url = ' '.join(fields[2:])
+
+            # Find to which file this session belongs
+            index = locateEventInSession(sessions, dateEvent)
+
+            # Create the appropriate event and insert it in the proper bucket of
+            # the sessions list.
+            counter = counter + 1
+            person = PLACamOutput.createPerson(os.path.basename(userName))
+            profile = PLACamOutput.createPersonProfile('vmwork', person)
+            
+            itemElement = PLACamOutput.createItem(None, text = url)
+            
+            entity = PLACamOutput.createEntity(personProfile = profile,
+                                               application = 'bash',
+                                               item = itemElement)
+            
+            context = PLACamOutput.createContext(session = sessions[index][3])
+
+            event = PLACamOutput.createEvent(
+                PLACamOutput.EventTypes.Firefox, dateEvent,
+                entityList = [entity], contextList = [context])
+
+            # Add the event to the session data structure
+            sessions[index][2][event.get('id')] = event
+        
+        dbg('  Added ' + str(counter) + ' new commands.')
+        dataFile.close()
+
 def toolProcessLog(prefix, userName, sessions):
     """
     Given an event logged as:
@@ -701,7 +770,7 @@ def toolProcessLog(prefix, userName, sessions):
     # Loop over all the bash files
     for dataFileName in dataFiles:
         dbg('  ' + dataFileName)
-        dataFile = open(dataFileName, 'r')
+        dataFile = codecs.open(dataFileName, 'r', 'utf-8')
 
         counter = 0
         # Loop over all the lines
