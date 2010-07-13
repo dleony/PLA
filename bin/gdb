@@ -30,8 +30,8 @@ def main():
     # If file is present in pladirectory, begin instrumentation
     if os.path.exists(dataDir):
         gdbDataOut = open(dataFile, 'a')
-        gdbDataOut.write('-E ' + str(datetime.datetime.now())[:-7] \
-                             + ' '.join(sys.argv) + '\n')
+        gdbDataOut.write('-BEGIN ' + str(datetime.datetime.now())[:-7] \
+                             + ' ' + ' '.join(sys.argv) + '\n')
 
     # Execute the given gdb command regularly
     try:
@@ -66,6 +66,8 @@ def main():
     gdbHistoryData = open(gdbHistoryFile, 'r')
     for line in gdbHistoryData:
         gdbDataOut.write(line)
+
+    gdbDataOut.write('-END\n')
 
     # Close files
     gdbHistoryData.close()
