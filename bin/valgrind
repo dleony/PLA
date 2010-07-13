@@ -48,7 +48,7 @@ def main():
         dataOut = open(dataFile, 'a')
 
         # Dump a mark status and time/date
-        dataOut.write('---- ' \
+        dataOut.write('-BEGIN ' \
                           + dateBegin + ' ' \
                           + str(datetime.datetime.now())[:-7] + ' ' \
                           + ' '.join(map(lambda x: '\'' + x + '\'', sys.argv)) \
@@ -69,7 +69,7 @@ def main():
     PLABasic.logMessage(prefix + ': command status = ' + str(originalStatus))
 
     if doLogging:
-        dataOut.write('--- ' + str(originalStatus))
+        dataOut.write('-END ' + str(originalStatus))
         dataOut.close()
 
     sys.exit(originalStatus)
