@@ -18,7 +18,7 @@ _elements = {}
 # Event enumeration
 class EventTypes:
     SessionStart, SessionEnd, OtherCommand, Gcc, GccMsg, Gdb, Kate, \
-        Kdevelop, Valgrind = range(9)
+        Kdevelop, Valgrind, Firefox = range(10)
 
 def eventName(value):
     if value == EventTypes.SessionStart:
@@ -39,6 +39,8 @@ def eventName(value):
         return 'Kdevelop'
     elif value == EventTypes.Valgrind:
         return 'Valgrind'
+    elif value == EventTypes.Firefox:
+        return 'Firefox'
 
 def main():
     """
