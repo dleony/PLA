@@ -44,9 +44,11 @@ def prepareDataFile(suffix):
         
     # Get the timestamp for the last execution
     lastExecution = PLABasic.getLastExecutionTStamp()
+    PLABasic.logMessage('Last execution: ' + str(lastExecution))
+
     date_clause = ''
     if lastExecution != None:
-        date_clause = "AND    visit_date > " + str(int(lastExecution * 1000000))
+        date_clause = "AND visit_date > " + str(int(lastExecution * 1000000))
         
     # Get the last activity from Firefox, through a query to the
     # history table
@@ -62,17 +64,15 @@ def prepareDataFile(suffix):
     PLABasic.logMessage('firefox: Query = ' + query)
     c.execute(query)
 
-    # If nothing is selected, we are done
-    if c.rowcount <= 0:
-        return []
-
     # Create a duplicate of the data file with the suffix
     toSendFileName = dataFile + '_' + suffix
 
-    # Dump the data
+    # Dump the data. Detect empty data because "rowcount" seems broken.
     dataOut = open(toSendFileName, 'w')
+    noData = True
     for row in c:
         dataOut.write(row['timestamp'] + ' ' + row['url'] + '\n')
+        noData = False
         
     # Close the statement and the data file
     c.close()
@@ -80,8 +80,13 @@ def prepareDataFile(suffix):
 
     # Remove the profile copy form the tmp directory
     os.remove(_tmpFile)
+    if noData:
+        PLABasic.logMessage('firefox empty data file detected. Removing')
+        os.remove(toSendFileName)
+        return []
 
     return [toSendFileName]
+
 def main():
     """
     Script to store the history of firefox
