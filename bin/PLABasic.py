@@ -3,7 +3,7 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, sys, tarfile, time, datetime, subprocess, shutil, random
+import os, sys, tarfile, time, datetime, subprocess, shutil, random, re, pysvn
 
 # Directory in user HOME containing the instrumented commands
 plaDirectory = os.path.expanduser('~/.pladata')
@@ -12,7 +12,7 @@ stampFileName = os.path.join(plaDirectory, 'tools', '.lastexecution')
 # plaDirectory = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), \
 #                                                     '..'))
 
-def findPLASVNDataDir(startDir = os.getcwd()):
+def findPLASVNDataDir(svnClient, startDir = os.getcwd()):
     """
     Starging in the given a directory, search for a folder with name .pladata
     traversing the folders toward the root of the filesystem.
@@ -24,15 +24,26 @@ def findPLASVNDataDir(startDir = os.getcwd()):
     startDir = os.path.abspath(startDir) # Manage absolute paths
 
     # While levels remaining, the dir exists and there is no .pladata loop
-    while (index < 20) and \
-            os.path.exists(startDir) and \
-            not os.path.exists(os.path.join(startDir, '.pladata')):
+    found = False
+    while (index < 20) and startDir != '/':
+        try:
+            # Ask for the url of directory/.pladata
+            root_url = svnClient.root_url_from_path(os.path.join(startDir, 
+                                                                 '.pladata'))
+            # If successfully obtained, we are done
+            found = True
+            break 
+        except pysvn.ClientError, e:
+            # If an exception pops up, the dir does not exist or not under SVN,
+            # keep iterating.
+            pass
+
         startDir = os.path.abspath(os.path.join(startDir, '..'))
         index = index + 1
-        
+
     # If .pladata was found, return it
     result = os.path.join(startDir, '.pladata')
-    if os.path.exists(result):
+    if found:
         return os.path.abspath(result)
 
     # Nothing found
@@ -230,7 +241,6 @@ def logMessage(msg):
             os.path.exists(os.path.join(plaDirectory, 'test')):
         print 'pla-' + msg
 
-
 def setLastExecutionTStamp():
     """
     Return the last time data were collected. It is based on a file the time of
@@ -254,6 +264,130 @@ def getLastExecutionTStamp():
 
     return os.stat(stampFileName).st_mtime
 
+def synchronizeFolders(source, destination, exclude = [], dryRun = False):
+    """
+    Function to synchronize two folders. The idea is that after the execution of
+    this function, folder destination has exactly the same content as folder
+    "source". The procedure works with two sets of files (recursively
+    obtained). The files in the intersection are kept, the files in the set
+    source - destination are copied and the files in destination - source are
+    deleted.
+    
+    The exclude list contains a set of strings coding regular expressions to
+    match against the file name. When a match is obtained, the file is skipped
+    from processing.
+
+    The dryRun parameter is to execute the function but disabling all file
+    operations, just print the log messages.
+    """
+
+    if not os.path.isdir(source):
+        logMessage('synchronizeFolder: ' + source + ' not found.')
+        return
+
+    if not os.path.isdir(destination):
+        logMessage('synchronizeFolder: ' + destination + ' not found.')
+        return
+
+    # Obtain the list of all files and directories in both locations
+    sourceSet = set(sum([l for l in 
+                         [map(lambda x: os.path.join(db.replace(source, '.', 1),
+                                                     x), dn + fn) 
+                          for (db, dn, fn) in os.walk(source)]], []))
+    
+    destSet = set(sum([l for l in 
+                       [map(lambda x: os.path.join(db.replace(destination, '.', 
+                                                              1), x), dn + fn) 
+                        for (db, dn, fn) in os.walk(destination)]], []))
+    
+
+    # Copy files/dirs in source and not in destination (sort to process files
+    # first)
+    for name in sorted(sourceSet - destSet, reverse = True):
+        srcName = os.path.join(source, name)
+        dstName = os.path.join(destination, name)
+
+        # Check if file/dir matches any of the excluded
+        if next((re.match(pattern, srcName) for pattern in exclude), None):
+            logMessage('EXCLUDED: ' + srcName)
+            continue
+
+        # Processing a directory
+        if os.path.isdir(srcName):
+            # If the dir exists, copy only metadata
+            if os.path.exists(dstName):
+                logMessage('METACOPY: ' + srcName)
+                if not dryRun:
+                    shutil.copystat(srcName, dstName)
+            # Else, create the dir
+            else:
+                logMessage('MKDIR: ' + dstName)
+                if not dryRun:
+                    os.makedirs(dstName)
+            continue
+        
+        # Processing a regular file
+
+        # Obtain the directory prefix of the file to create it if needed
+        dirName = os.path.dirname(name)
+
+        # Check if the dst directory exists
+        if os.path.dirname(name) != '' and not os.path.exists(dirName):
+            logMessage('MKDIR: ' + os.path.join(destination, dirName))
+            if not dryRun:
+                os.makedirs(os.path.join(destination, dirName))
+        # Copy the file
+        logMessage('COPY: ' + srcName + ' to ' + dstName)
+        if not dryRun:
+            shutil.copy2(srcName, dstName)
+
+    # Delete files/dirs in destination not in source
+    for name in destSet - sourceSet:
+        rmName = os.path.join(destination, name)
+
+        # Check if file/dir matches any of the excluded
+        if next((re.match(pattern, rmName) for pattern in exclude), None):
+            logMessage('EXCLUDED: ' + rmName)
+            continue
+
+        # If a dir, use the recursive delete function
+        if os.path.isdir(rmName):
+            logMessage('RMDIR: ' + rmName)
+            if not dryRun:
+                shutil.rmtree(rmName, ignore_errors = True)
+        else:
+            logMessage('REMOVE: ' + rmName)
+            if not dryRun:
+                os.remove(rmName)
+
+    # Those files in both sets need to be checked
+    for name in destSet & sourceSet:
+        srcName = os.path.join(source, name)
+        dstName = os.path.join(destination, name)
+
+        # Check if file/dir matches any of the excluded
+        if next((re.match(pattern, srcName) for pattern in exclude), None):
+            logMessage('EXCLUDED: ' + srcName)
+            continue
+
+        # If both files/dirs have identical stats (uid, gid, length, ctime and
+        # mtime), skip the operation
+        if os.stat(srcName)[4:-1] == os.stat(dstName)[4:-1]:
+            logMessage('SKIP: ' + srcName)
+            continue
+
+        # If it is a directory, copy only the metadata
+        if os.path.isdir(srcName):
+            logMessage('METACOPY: ' + srcName)
+            if not dryRun:
+                shutil.copystat(srcName, dstName)
+            continue
+
+        # If it is a file, simply copy the content
+        logMessage('COPY: ' + srcName + ' to ' + dstName)
+        if not dryRun:
+            shutil.copy2(srcName, dstName)
+        
 def dumpException(e):
     """
     When an exception appears, its appearance in the screen should be subject to
