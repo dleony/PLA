@@ -21,3 +21,6 @@
 
 * If using a graphic environment with icons, check the icons to make sure they
   execute the right commands.
+
+* Deploy and properly configure a widget showing the feedback folder in the
+  desktop. Tweak options such as icons to show, files to filter, etc.
