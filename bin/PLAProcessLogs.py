@@ -422,26 +422,29 @@ def toolProcessGcc(userName, sessions):
                 profile = PLACamOutput.createPersonProfile('vmwork', person)
 
                 # Create the entity stating that the command executed
-                commandItem = PLACamOutput.createItem(None, text = command)
-
+                commandItem = PLACamOutput.createItemVersion(None, 
+                                                             text = command)
+                
                 entities = [PLACamOutput.createEntity(personProfile = profile,
                                                       application = 'gcc',
-                                                      item = commandItem)]
+                                                      itemVersion = commandItem)]
 
                 # Create the two possible entities with output and error msgs
                 if errorText != '':
-                    errorItem = PLACamOutput.createItem(None, text = errorText)
+                    errorItem = PLACamOutput.createItemVersion(None, 
+                                                               text = errorText)
                     entities.append(\
                         PLACamOutput.createEntity(personProfile = profile,
                                                   application = 'gcc-error',
-                                                  item = errorItem))
+                                                  itemVersion = errorItem))
                 outputEntity = []
                 if outputText != '':
-                    outputItem = PLACamOutput.createItem(None, text = outputText)
+                    outputItem = \
+                        PLACamOutput.createItemVersion(None, text = outputText)
                     entities.append(\
                         PLACamOutput.createEntity(personProfile = profile,
                                                   application = 'gcc-output',
-                                                  item = outputItem))
+                                                  itemVersion = outputItem))
 
                 # The context
                 context = PLACamOutput.createContext(session = sessions[index][3])
@@ -542,17 +545,18 @@ def toolProcessGdb(userName, sessions):
                 profile = PLACamOutput.createPersonProfile('vmwork', person)
 
                 # Create the entity stating that the command executed
-                commandItem = PLACamOutput.createItem(None, text = command)
+                commandItem = PLACamOutput.createItemVersion(None, 
+                                                             text = command)
 
                 entities = [PLACamOutput.createEntity(personProfile = profile,
                                                       application = 'gdb',
-                                                      item = commandItem)]
+                                                      itemVersion = commandItem)]
                 
-                gdbcmds = PLACamOutput.createItem(None, text = outputText)
+                gdbcmds = PLACamOutput.createItemVersion(None, text = outputText)
                 entities.append(\
                     PLACamOutput.createEntity(personProfile = profile,
                                               application = 'gdb-cmds',
-                                              item = gdbcmds))
+                                              itemVersion = gdbcmds))
 
                 # The context
                 context = PLACamOutput.createContext(session = sessions[index][3])
@@ -639,17 +643,19 @@ def toolProcessValgrind(userName, sessions):
                 profile = PLACamOutput.createPersonProfile('vmwork', person)
 
                 # Create the entity stating that the command executed
-                commandItem = PLACamOutput.createItem(None, text = command)
+                commandItem = PLACamOutput.createItemVersion(None, 
+                                                             text = command)
 
                 entities = [PLACamOutput.createEntity(personProfile = profile,
                                                       application = 'vagrind',
-                                                      item = commandItem)]
+                                                      itemVersion = commandItem)]
                 
-                valgrindmsgs = PLACamOutput.createItem(None, text = outputText)
+                valgrindmsgs = PLACamOutput.createItemVersion(None, 
+                                                              text = outputText)
                 entities.append(\
                     PLACamOutput.createEntity(personProfile = profile,
                                               application = 'valgrind-msgs',
-                                              item = valgrindmsgs))
+                                              itemVersion = valgrindmsgs))
 
                 # The context
                 context = PLACamOutput.createContext(session = sessions[index][3])
@@ -720,11 +726,11 @@ def toolProcessFirefox(userName, sessions):
             person = PLACamOutput.createPerson(os.path.basename(userName))
             profile = PLACamOutput.createPersonProfile('vmwork', person)
             
-            itemElement = PLACamOutput.createItem(None, text = url)
+            itemElement = PLACamOutput.createItemVersion(None, text = url)
             
             entity = PLACamOutput.createEntity(personProfile = profile,
                                                application = 'bash',
-                                               item = itemElement)
+                                               itemVersion = itemElement)
             
             context = PLACamOutput.createContext(session = sessions[index][3])
 
@@ -796,9 +802,8 @@ def toolProcessLog(prefix, userName, sessions):
             person = PLACamOutput.createPerson(os.path.basename(userName))
             profile = PLACamOutput.createPersonProfile('vmwork', person)
             
-            item = PLACamOutput.createItem(None, 
-                                           text = ' '.join(fields[5:-1]))
-            itemV = PLACamOutput.createItemVersion(item)
+            itemV = PLACamOutput.createItemVersion(None, 
+                                                   text = ' '.join(fields[5:-1]))
             
             entity = PLACamOutput.createEntity(personProfile = profile,
                                                application = prefix,

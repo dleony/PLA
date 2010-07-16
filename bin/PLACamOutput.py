@@ -181,14 +181,21 @@ def createPerson(name):
 
     return lookupElement(etree.Element('person', {'name' : name}))
 
-def createItemVersion(itemId):
+def createItemVersion(itemId, attribs = None, elems = [], text = None):
     """
     Create an XML element representing an item version. It expects
     
     itemId: id of an item
     """
 
-    return lookupElement(etree.Element('itemVersion', {'itemId': itemId}))
+    # If itemId is given, create a new version
+    if itemId != None:
+        return lookupElement(etree.Element('itemVersion', {'itemId': itemId}))
+
+    # Create the item and then the version
+    return lookupElement(etree.Element('itemVersion',
+                                       {'itemId' : 
+                                       createItem(attribs, elems, text)}))
 
 def createItem(attribs, elems = [], text = None):
     """
