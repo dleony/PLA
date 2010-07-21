@@ -729,7 +729,7 @@ def toolProcessFirefox(userName, sessions):
             itemElement = PLACamOutput.createItemVersion(None, text = url)
             
             entity = PLACamOutput.createEntity(personProfile = profile,
-                                               application = 'bash',
+                                               application = 'firefox',
                                                itemVersion = itemElement)
             
             context = PLACamOutput.createContext(session = sessions[index][3])
