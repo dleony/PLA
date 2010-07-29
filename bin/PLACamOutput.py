@@ -6,7 +6,7 @@
 
 # Import conditionally either regular xml support or lxml if present
 
-import datetime, hashlib
+import datetime, hashlib, rfc822, xml.sax.saxutils
 
 try:
     from lxml import etree
@@ -17,30 +17,19 @@ _elements = {}
 
 # Event enumeration
 class EventTypes:
-    SessionStart, SessionEnd, OtherCommand, Gcc, GccMsg, Gdb, Kate, \
-        Kdevelop, Valgrind, Firefox = range(10)
+    SessionBegin, SessionEnd, BashCommand, GccMsg, VisitURL = range(5)
 
 def eventName(value):
-    if value == EventTypes.SessionStart:
-        return 'SessionStart'
+    if value == EventTypes.SessionBegin:
+        return 'SessionBegin'
     elif value == EventTypes.SessionEnd:
         return 'SessionEnd'
-    elif value == EventTypes.OtherCommand:
-        return 'OtherCommand'
-    elif value == EventTypes.Gcc:
-        return 'Gcc'
+    elif value == EventTypes.BashCommand:
+        return 'bashcommand'
     elif value == EventTypes.GccMsg:
         return 'GccMsg'
-    elif value == EventTypes.Gdb:
-        return 'Gdb'
-    elif value == EventTypes.Kate:
-        return 'Kate'
-    elif value == EventTypes.Kdevelop:
-        return 'Kdevelop'
-    elif value == EventTypes.Valgrind:
-        return 'Valgrind'
-    elif value == EventTypes.Firefox:
-        return 'Firefox'
+    elif value == EventTypes.VisitURL:
+        return 'VisitURL'
 
 def main():
     """
@@ -59,7 +48,7 @@ def main():
                             environment = 'envit', session = 'sessionid')
     print (etree.tostring(context, pretty_print = True))
 
-    event = createEvent(EventTypes.SessionStart,
+    event = createEvent(EventTypes.SessionBegin,
                         datetime.datetime(2010, 06, 30, 13, 14, 59),
                         identifier = 'eventid',
                         name = 'eventname',
@@ -71,7 +60,7 @@ def main():
     thetree.write('crap.xml', encoding = 'unicode', xml_declaration = True,
                   method = 'xml', pretty_print = True)
 
-def createEvent(evType, tstamp, until = None, name = None, contextList = [], 
+def createEvent(evType, tstamp, name = None, contextList = [], 
                 entityList = []):
     """
     Create an XML element representing an event. Returns the XML object
@@ -79,7 +68,6 @@ def createEvent(evType, tstamp, until = None, name = None, contextList = [],
     It expects:
     evType: Enum
     tstamp: datetime object
-    until : datetime object
     name : string
     contextList: List of context elements
     entityList: List of entity elements
@@ -90,13 +78,11 @@ def createEvent(evType, tstamp, until = None, name = None, contextList = [],
     result.attrib['type'] = eventName(evType)
     if tstamp == None:
         tstamp = datetime.datetime.now()
-    result.attrib['datetime'] = tstamp.strftime('%Y-%m-%d %H:%M:%S')
-    if until != None:
-        result.attrib['until'] = until.strftime('%Y-%m-%d %H:%M:%S')
+    result.attrib['datetime'] = rfc822.formatdate(rfc822.mktime_tz(rfc822.parsedate_tz(tstamp.strftime("%a, %d %b %Y %H:%M:%S"))))
     if name != None:
         result.attrib['name'] = name
 
-    for el in contextList + entityList:
+    for el in  entityList + contextList:
         result.append(el)
 
     # Create the ID
@@ -106,34 +92,53 @@ def createEvent(evType, tstamp, until = None, name = None, contextList = [],
 
     return result
 
-def createEntity(device = None, application = None, itemVersion = None, 
-                 item = None, personProfile = None):
+def createEntityAppDevice(name, text, role = None):
     """
     Create an XML element representing an entity. Returns the XML object.
+
     It expects:
-    - device: string
-    - application: string
-    - itemVersion: string
-    - personProfile: string
+    - name: string with the name of the entity ('application' or 'device')
+    - text: name of the application or the device to be used. It will be used as
+    the name attribute for a newly create element. 
+    - role: string to be added as role attribute
     """
 
-    result = etree.Element('entity')
+    result = etree.Element(name)
+    result.attrib['refId'] = lookupElement(etree.Element(name, {'name': text}))
 
-    if device != None:
-        etree.SubElement(result, 'device', {'id': device})
-    if application != None:
-        etree.SubElement(result, 'application', {'id': application })
-    if itemVersion != None:
-        etree.SubElement(result, 'itemVersion', {'id': itemVersion })
-    if item != None:
-        etree.SubElement(result, 'item', {'id': item })
-    if personProfile != None:
-        etree.SubElement(result, 'personProfile', {'id': personProfile })
-    
+    if role != None:
+        result.attrib['role'] = role
+
     return result
 
-def createContext(task = None, location = None, environment = None, 
-                  session = None):
+# def createEntity(device = None, application = None, itemVersion = None, 
+#                  item = None, personProfile = None):
+#     """
+#     Create an XML element representing an entity. Returns the XML object.
+#     It expects:
+#     - device: string
+#     - application: string
+#     - itemVersion: string
+#     - personProfile: string
+#     """
+
+#     result = etree.Element('entity')
+
+#     if device != None:
+#         etree.SubElement(result, 'device', {'id': device})
+#     if application != None:
+#         etree.SubElement(result, 'application', {'id': application })
+#     if itemVersion != None:
+#         etree.SubElement(result, 'itemVersion', {'id': itemVersion })
+#     if item != None:
+#         etree.SubElement(result, 'item', {'id': item })
+#     if personProfile != None:
+#         etree.SubElement(result, 'personProfile', {'id': personProfile })
+    
+#     return result
+
+def createContext(result = None, task = None, location = None, 
+                  environment = None, session = None, role = None):
     """
     Create an XML element representing a context. Returns the XML object. It
     expects:
@@ -142,19 +147,32 @@ def createContext(task = None, location = None, environment = None,
     - location: string
     - environment: string
     - session: sessionId
+    - role: string to be added as role attribute to the elements
+
+    If currentContext is not None, it is extended with the appropriate
+    elements.
     """
     
-    result = etree.Element('context')
+    if result == None:
+        result = etree.Element('context')
 
+    children = []
     if task != None:
-        etree.SubElement(result, 'task', {'id': task})
+        children.append(etree.Element('task', {'refId': task}))
     if location != None:
-        etree.SubElement(result, 'location', {'id': location })
+        children.append(etree.Element('location', {'refId': location }))
     if environment != None:
-        etree.SubElement(result, 'environment', {'id': environment })
+        children.append(etree.Element('environment', {'refId': environment }))
     if session != None:
-        etree.SubElement(result, 'session', {'id': session })
+        children.append(etree.Element('session', {'refId': session }))
     
+    # Add the role attribute if given
+    if role != None:
+        for element in children:
+            element.attrib['role'] = role
+        
+    result.extend(children)
+
     return result
 
 
@@ -167,9 +185,8 @@ def createPersonProfile(name, personId):
     personId: User name
     """
 
-    return lookupElement(etree.Element('personProfile', \
-                                           {'name' : name, 
-                                            'personId' : personId}))
+    return etree.Element('personProfile', {'name' : name, 
+                                           'personId' : personId})
 
 def createPerson(name):
     """
@@ -181,21 +198,29 @@ def createPerson(name):
 
     return lookupElement(etree.Element('person', {'name' : name}))
 
-def createItemVersion(itemId, attribs = None, elems = [], text = None):
+def createItemVersion(itemId, role = None, attribs = None, elems = [], 
+                      text = None):
     """
     Create an XML element representing an item version. It expects
     
     itemId: id of an item
     """
 
+    result = None
     # If itemId is given, create a new version
     if itemId != None:
-        return lookupElement(etree.Element('itemVersion', {'itemId': itemId}))
+        result = etree.Element('itemVersion', {'itemId': itemId})
+    else:
+        # Create the item and then the version
+        result = etree.Element('itemVersion',
+                               {'itemId' : 
+                                createItem(attribs, elems, text)})
 
-    # Create the item and then the version
-    return lookupElement(etree.Element('itemVersion',
-                                       {'itemId' : 
-                                       createItem(attribs, elems, text)}))
+    # If a role attribute is given, insert it in the result
+    if role != None:
+        result.attrib['role'] = role
+
+    return result
 
 def createItem(attribs, elems = [], text = None):
     """
@@ -213,7 +238,7 @@ def createItem(attribs, elems = [], text = None):
 
     # If CDATA is given, attach it
     if text != None:
-        result.text = text
+        result.text = xml.sax.saxutils.escape(text)
 
     return lookupElement(result)
 
@@ -231,9 +256,9 @@ def createSession(name, tstart, tstop):
     if name != None:
         result.attrib['name'] = str(name)
     if tstart != None:
-        result.attrib['tstart'] = tstart.strftime('%Y-%m-%d %H:%M:%S')
+        result.attrib['begin'] = rfc822.formatdate(rfc822.mktime_tz(rfc822.parsedate_tz(tstart.strftime("%a, %d %b %Y %H:%M:%S"))))
     if tstop != None:
-        result.attrib['tstop'] = tstop.strftime('%Y-%m-%d %H:%M:%S')
+        result.attrib['end'] = rfc822.formatdate(rfc822.mktime_tz(rfc822.parsedate_tz(tstop.strftime("%a, %d %b %Y %H:%M:%S"))))
 
     return lookupElement(result)
 
