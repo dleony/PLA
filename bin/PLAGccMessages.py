@@ -82,24 +82,17 @@ def main():
     else:
         filterGccMsgs('', None, codecs.open(sys.argv[1], 'r', 'utf-8'))
 
-def filterGccMsgs(sessionId, dateEvent, text):
+def filterGccMsgs(text):
     """
-    Given a set of lines produced by the compiler, create events from them. This
-    is a catalog of regular expressions to catch some common mistakes.
+    Given a set of lines produced by the compiler, create elements of the form:
 
-    <event type="gccmsg" datetime=DATE BEGIN>
-      <entity>
-        <application>gcc</application>
-        <item>TEXT</item>
-      </entity>
-      <context>
-        <session id="GCC EVENT ID"/>
-      </context>
-    </event>
+    <itemVersion itemId="msg item id"/>
+    <item id="...">Text of the message</item
 
-    <item id="msg>
-     One message by the compiler
-    </item>
+    Return the list of ItemVersions
+
+    The messages are detected using a catalog of regular expressions to catch
+    the most common mistakes.
     """
 
     global _msgs
@@ -107,27 +100,17 @@ def filterGccMsgs(sessionId, dateEvent, text):
     result = []
 
     # Parse line by line and detect patterns
-    counter = 1
     for line in text.splitlines():
         index = next((a for a in range(len(_msgs)) if _msgs[a][1].search(line)), 
                      None)
+
         if index == None:
-            # Line does not match with anything at all
-            counter += 1
+            # Line does not match any expression
             continue
 
-        msgItem = PLACamOutput.createItem(None, text = line[:-1])
+        result.append(
+            PLACamOutput.createItemVersion(None, role = 'gccerror', text = line))
 
-        entity = PLACamOutput.createEntity(application = 'gcc', item = msgItem)
-
-        context = PLACamOutput.createContext(session = sessionId)
-
-        result.append(PLACamOutput.createEvent(PLACamOutput.EventTypes.GccMsg,
-                                                dateEvent, 
-                                                name = str(counter),
-                                                entityList = [entity],
-                                                contextList = [context]))
-        counter += 1
 
     return result
 
