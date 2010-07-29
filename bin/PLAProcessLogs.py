@@ -265,23 +265,28 @@ def toolProcessBash(userName, sessions):
     Given the user and the session files, move the events in the bash file to
     the corresponding session
 
-    <event id = ??
-           datetime = from the file>
-      <entity>
-        <application>bash</application>
-        <personProfile id="vmwork"/>
-        <item type="bash"> command </item>
-      </entity>
+    <event type="bashcommand" datetime="date/time when executed" id="...">
+      <application refId="id of the command"/>
+      <personProfile personId="..." name="vmwork"/>
+      <itemVersion refId="to the version" role="command"/>
       <context>
-        <session id="session Id"/>
+        <session refId="session Id"/>
       </context>
     </event>
+
+    <application name="the command name" id="..."/>
+    <person name="..." id="..."/>
+    <item id="...">The entire command line</item>
     """
     
+    # Commands that even though the appear as bash, they require special
+    # processing thus, they are processed somewhere else.
+    skipCommands = set(['gcc', 'valgrind', 'gdb', 'kate', 'kdevelop'])
+
     # Obtain the the files with the bash history data
     dataDir = os.path.join(userName, 'home', 'teleco')
     historyFiles = glob.glob(os.path.join(dataDir, '.bash_history') + 
-                             '_[0-9]*_[0-9]*')
+                             '_[0-9]*_[0-9][0-9][0-9][0-9][0-9]')
     historyFiles.sort()
     
     dbg('Processing bash data files')
@@ -295,9 +300,22 @@ def toolProcessBash(userName, sessions):
         counter = 0
         # Loop over all the lines
         for line in dataFile:
+
+            # Detect and skip empty lines
+            if line == '\n':
+                continue
+
             # Detect timestamp
             if line.startswith('#'):
                 stamp = datetime.datetime.fromtimestamp(float(line[1:]))
+                continue
+            
+            # Chop the command line to find out if it is one of the special
+            # commands: gcc, valgrind, gdb, kate, kdevelop. If so, skip the
+            # processing because it is done in other specific function.
+            fields = line.split()
+            if os.path.basename(fields[0]) in skipCommands:
+                dbg(' Skipping cmd ' + os.path.basename(fields[0]))
                 continue
 
             # Find to which file this session belongs
@@ -307,65 +325,49 @@ def toolProcessBash(userName, sessions):
             # the sessions list.
             counter = counter + 1
             person = PLACamOutput.createPerson(os.path.basename(userName))
-            profile = PLACamOutput.createPersonProfile('vmwork', person)
             
-            item = PLACamOutput.createItem(None, text = line[:-1])
-            itemV = PLACamOutput.createItemVersion(item)
-            
-            entity = PLACamOutput.createEntity(personProfile = profile,
-                                               application = 'bash',
-                                               itemVersion = itemV)
-            
-            context = PLACamOutput.createContext(session = sessions[index][3])
-
             event = PLACamOutput.createEvent(
-                PLACamOutput.EventTypes.OtherCommand, stamp,
-                entityList = [entity], contextList = [context])
+                PLACamOutput.EventTypes.BashCommand, stamp,
+                entityList = [\
+                    PLACamOutput.createPersonProfile('vmwork', person),
+                    PLACamOutput.createEntityAppDevice('application',
+                                                       os.path.basename(fields[0])),
+                    PLACamOutput.createItemVersion(None, role = 'command', 
+                                                   text = line[:-1])
+                    ],
+                contextList = [\
+                    PLACamOutput.createContext(session = sessions[index][3])
+                    ])
 
             # Add the event to the session data structure
             sessions[index][2][event.get('id')] = event
         
-        dbg('  Added ' + str(counter) + ' new commands.')
+        dbg('  Added ' + str(counter) + ' new events.')
         dataFile.close()
 
 def toolProcessGcc(userName, sessions):
     """
-    Given the events logged by the compiler, create the appropriate event
-    
-    <event type='Gcc' datetime=DATE BEGIN>
-      <entity>
-        <application>gcc-output</application>
-        <personProfile id="vmwork" personId="REF TO USER"/>
-        <item id="??">
-      </entity>
-      <entity>
-        <application>gcc-error</application>
-        <personProfile id="vmwork" personId="REF TO USER"/>
-        <item id="??">
-      </entity>
+    Given the events logged by the compiler, create the event with the following
+    structure:
+
+    <event type="bashcommand" datetime="date/time when executed" id="...">
+      <application refId="id of Gcc"/>
+      <personProfile personId="..." name="vmwork"/>
+      <itemVersion role="command" refId="item with the command" role="command"/>
+      <itemVersion role="message" refId="item with msg"/>
+      ...
+      <itemVersion role="message" refId="item with msg"/>
       <context>
         <session id="session Id"/>
       </context>
     </event>
 
-    <event type="gccmsg" datetime=DATE BEGIN>
-      <entity>
-        <application>gcc</application>
-        <item>TEXT</item>
-      </entity>
-      <context>
-        <session id="GCC EVENT ID"/>
-      </context>
-    </event>
-    <item id="a">
-    All the text in the command output
-    </item>
-    <item id="b">
-    All the text in the command error
-    </item>
-    <item id="msg>
-     One message by the compiler
-    </item>
+    <application name="gcc" id="..."/>
+    <person name="..." id="..."/>
+    <item id="...">The entire command</item>
+    <item id="...">error msg</item>
+    ...
+    <item id="...">error msg</item>
     """
 
     # Obtain the files with the gcc history data
@@ -417,52 +419,36 @@ def toolProcessGcc(userName, sessions):
             if re.match('^\-END$', line):
 
                 dbg(' Detected end of GCC session')
-                # Create the different event elements
+
+                # Create the event element
                 person = PLACamOutput.createPerson(os.path.basename(userName))
-                profile = PLACamOutput.createPersonProfile('vmwork', person)
-
-                # Create the entity stating that the command executed
-                commandItem = PLACamOutput.createItemVersion(None, 
-                                                             text = command)
                 
-                entities = [PLACamOutput.createEntity(personProfile = profile,
-                                                      application = 'gcc',
-                                                      itemVersion = commandItem)]
+                # Entities in the event (personProfile, application and item as
+                # command 
+                entityList = [\
+                    PLACamOutput.createPersonProfile('vmwork', person),
+                    PLACamOutput.createEntityAppDevice('application', 'gcc'),
+                    PLACamOutput.createItemVersion(None, role = 'command', 
+                                                   text = command)
+                    ]
+                
+                # Extend the entities with the error messages
+                entityList.extend(PLAGccMessages.filterGccMsgs(errorText + \
+                                                                   outputText))
+                # Create the event
+                event = PLACamOutput.createEvent(
+                    PLACamOutput.EventTypes.BashCommand, 
+                    dateEvent,
+                    entityList = entityList,
+                    contextList = [\
+                        PLACamOutput.createContext(session = sessions[index][3])
+                        ])
 
-                # Create the two possible entities with output and error msgs
-                if errorText != '':
-                    errorItem = PLACamOutput.createItemVersion(None, 
-                                                               text = errorText)
-                    entities.append(\
-                        PLACamOutput.createEntity(personProfile = profile,
-                                                  application = 'gcc-error',
-                                                  itemVersion = errorItem))
-                outputEntity = []
-                if outputText != '':
-                    outputItem = \
-                        PLACamOutput.createItemVersion(None, text = outputText)
-                    entities.append(\
-                        PLACamOutput.createEntity(personProfile = profile,
-                                                  application = 'gcc-output',
-                                                  itemVersion = outputItem))
-
-                # The context
-                context = PLACamOutput.createContext(session = sessions[index][3])
-
-                # And the event
-                event = PLACamOutput.createEvent(PLACamOutput.EventTypes.Gcc, \
-                                                     dateEvent, \
-                                                     entityList = entities, \
-                                                     contextList = [context])
                 # And add the event to the session
                 sessions[index][2][event.get('id')] = event
-                
-                # Add the events derived from processing the output/error msgs
-                for msgevent in PLAGccMessages.filterGccMsgs(event.get('id'), dateEvent,
-                                                            errorText + outputText):
-                    sessions[index][2][msgevent.get('id')] = msgevent
 
-                # Reset all flags
+
+                # Reset all flags to keep parsing
                 errorText = ''
                 outputText = ''
                 inError = False
@@ -472,7 +458,7 @@ def toolProcessGcc(userName, sessions):
 
                 continue
 
-            # Regular line
+            # Regular line in the middle of the log file
             if inError:
                 errorText += line
             elif inOutput:
@@ -484,25 +470,30 @@ def toolProcessGcc(userName, sessions):
 
 def toolProcessGdb(userName, sessions):
     """
-    Given the events logged by the debugger, create the appropriate events
+    Given the events logged by the debugger, create the following events:
     
-    <event type='Gdb' datetime=DATE BEGIN>
-      <entity>
-        <application>gdb</application>
-        <personProfile id="vmwork" personId="REF TO USER"/>
-      </entity>
-      <entity>
-        <application>gdb-cmds</application>
-        <item id="cmds" />
-      </entity>
+    <event type="SessionBegin" datetime="begin time" id="...">
+      <personProfile personId="..." name="vmwork"/>
+      <application refId="id pointing to 'gdb'"/>
+      <itemVersion role="commands" refId="item with the commands"/>
       <context>
         <session id="session Id"/>
       </context>
     </event>
 
-    <item id="commands">
-    All the commands, one per line
-    </item>
+    <event type="SessionEnd" datetime="End time" id="...">
+      <personProfile personId="..." name="vmwork"/>
+      <application refId="id pointing to 'gdb'"/>
+      <itemVersion role="commands" refId="item with the commands"/>
+      <context>
+        <session id="session Id"/>
+      </context>
+    </event>
+
+    <item id="commands">All the commands, one per line</item>
+    <session name="GDB_session_id of sesionBegin" 
+             id="..." begin="begin date/time" 
+             end="end date/time"/>
     """
 
     # Obtain the files with the gcc history data
@@ -523,13 +514,19 @@ def toolProcessGdb(userName, sessions):
         command = None
         # Loop over all the lines in the file
         for line in dataFile:
-            
+
+            # Skip the empty lines
+            if line == '\n':
+                continue
+
             # Beginning of log
             if re.match('^\-BEGIN .+$', line):
                 fields = line.split()
                 dateEvent = datetime.datetime.strptime(' '.join(fields[1:3]),
                                                        '%Y-%m-%d %H:%M:%S')
-                command = ' '.join(fields[3:])
+                dateEnd = datetime.datetime.strptime(' '.join(fields[3:5]),
+                                                       '%Y-%m-%d %H:%M:%S')
+                command = ' '.join(fields[5:])
 
                 # Find to which file this session belongs
                 index = locateEventInSession(sessions, dateEvent)
@@ -540,35 +537,52 @@ def toolProcessGdb(userName, sessions):
             # End of log
             if re.match('^\-END$', line):
                 dbg(' Detected end of GDB session')
-                # Create the different event elements
+
+                # Create the dbg session element with begin/end date/times
+                sessionElement = \
+                    PLACamOutput.createSession('GDB_' + sessions[index][3],
+                                               dateEvent, dateEnd)
+
+                # Create the person element to be inserted in the SessionBegin
                 person = PLACamOutput.createPerson(os.path.basename(userName))
-                profile = PLACamOutput.createPersonProfile('vmwork', person)
 
-                # Create the entity stating that the command executed
-                commandItem = PLACamOutput.createItemVersion(None, 
-                                                             text = command)
+                # Create a context with two session elements distinguished by a
+                # role
+                context = \
+                    PLACamOutput.createContext(session = sessionElement)
 
-                entities = [PLACamOutput.createEntity(personProfile = profile,
-                                                      application = 'gdb',
-                                                      itemVersion = commandItem)]
-                
-                gdbcmds = PLACamOutput.createItemVersion(None, text = outputText)
-                entities.append(\
-                    PLACamOutput.createEntity(personProfile = profile,
-                                              application = 'gdb-cmds',
-                                              itemVersion = gdbcmds))
+                # Create the SessionBegin and SessionEnd events
+                eventBegin = PLACamOutput.createEvent(
+                    PLACamOutput.EventTypes.SessionBegin, dateEvent,
+                    entityList = [
+                        PLACamOutput.createPersonProfile('vmwork', person),
+                        PLACamOutput.createEntityAppDevice('application',
+                                                           'gdb'),
+                        PLACamOutput.createItemVersion(None, role="commands",
+                                                       text = outputText)
+                        ],
+                    contextList = [context])
+                    
+                # Create a duplicate of the context to be inserted in the end
+                # event as well
+                context = \
+                    PLACamOutput.createContext(session = sessionElement)
 
-                # The context
-                context = PLACamOutput.createContext(session = sessions[index][3])
+                eventEnd = PLACamOutput.createEvent(
+                    PLACamOutput.EventTypes.SessionEnd, dateEnd,
+                    entityList = [
+                        PLACamOutput.createPersonProfile('vmwork', person),
+                        PLACamOutput.createEntityAppDevice('application', 'gdb'),
+                        PLACamOutput.createItemVersion(None, role="commands",
+                                                       text = outputText)
+                        ],
+                    contextList = [context])
+                    
 
-                # And the event
-                event = PLACamOutput.createEvent(PLACamOutput.EventTypes.Gdb, \
-                                                     dateEvent, \
-                                                     entityList = entities, \
-                                                     contextList = [context])
-                # And add the event to the session
-                sessions[index][2][event.get('id')] = event
-                
+                # And add the two events to the tuple
+                sessions[index][2][eventBegin.get('id')] = eventBegin
+                sessions[index][2][eventEnd.get('id')] = eventEnd
+
                 # Reset values
                 dateEvent = None
                 command = None
@@ -580,25 +594,30 @@ def toolProcessGdb(userName, sessions):
 
 def toolProcessValgrind(userName, sessions):
     """
-    Given the events logged by valgrind, create the appropriate events
+    Given the events logged by valgrind, create the following elements
     
-    <event type='valgrind' datetime=DATE BEGIN until= DATE END>
-      <entity>
-        <application>valgrind</application>
-        <personProfile id="vmwork" personId="REF TO USER"/>
-      </entity>
-      <entity>
-        <application>gdb</application>
-        <item ref="valgrind messages"/>
-      </entity>
+    <event type="SessionBegin" datetime="begin time" id="...">
+      <personProfile personId="..." name="vmwork"/>
+      <application refId="id pointing to 'valgrind'"/>
+      <itemVersion role="messages" refId="item with the messages"/>
       <context>
         <session id="session Id"/>
       </context>
     </event>
 
-    <item id="valgrind messages">
-    All the commands, one per line
-    </item>
+    <event type="SessionEnd" datetime="End time" id="...">
+      <personProfile personId="..." name="vmwork"/>
+      <application refId="id pointing to 'valgrind'"/>
+      <itemVersion role="commands" refId="item with the messages"/>
+      <context>
+        <session id="session Id"/>
+      </context>
+    </event>
+
+    <item id="...">All the commands, one per line</item>
+    <session name="Valgrind_session_id of sessionBegin" 
+             id="..." begin="begin date/time" 
+             end="end date/time"/>
     """
 
     # Obtain the files with the gcc history data
@@ -620,6 +639,10 @@ def toolProcessValgrind(userName, sessions):
         # Loop over all the lines in the file
         for line in dataFile:
             
+            # Skip the empty lines
+            if line == '\n':
+                continue
+
             # Beginning of log
             if re.match('^\-BEGIN .+$', line):
                 fields = line.split()
@@ -638,36 +661,51 @@ def toolProcessValgrind(userName, sessions):
             # End of log
             if re.match('^\-END [0-9]+', line):
                 dbg(' Detected end of Valgrind session')
-                # Create the different event elements
+
+                # Create the dbg session element with begin/end date/times
+                sessionElement = \
+                    PLACamOutput.createSession('Valgrind_' + sessions[index][3],
+                                               dateEvent, dateEnd)
+
+                # Create the person element to be inserted in the SessionBegin
                 person = PLACamOutput.createPerson(os.path.basename(userName))
-                profile = PLACamOutput.createPersonProfile('vmwork', person)
 
-                # Create the entity stating that the command executed
-                commandItem = PLACamOutput.createItemVersion(None, 
-                                                             text = command)
+                # Create a context with two session elements distinguished by a
+                # role
+                context = \
+                    PLACamOutput.createContext(session = sessionElement)
+                # Create the SessionBegin and SessionEnd events
+                eventBegin = PLACamOutput.createEvent(
+                    PLACamOutput.EventTypes.SessionBegin, dateEvent,
+                    entityList = [
+                        PLACamOutput.createPersonProfile('vmwork', person),
+                        PLACamOutput.createEntityAppDevice('application',
+                                                           'valgrind'),
+                        PLACamOutput.createItemVersion(None, role="messages",
+                                                       text = outputText)
+                        ],
+                    contextList = [context])
+                    
+                # Create a duplicate of the context to be inserted in the end
+                # event as well
+                context = \
+                    PLACamOutput.createContext(session = sessionElement)
 
-                entities = [PLACamOutput.createEntity(personProfile = profile,
-                                                      application = 'vagrind',
-                                                      itemVersion = commandItem)]
-                
-                valgrindmsgs = PLACamOutput.createItemVersion(None, 
-                                                              text = outputText)
-                entities.append(\
-                    PLACamOutput.createEntity(personProfile = profile,
-                                              application = 'valgrind-msgs',
-                                              itemVersion = valgrindmsgs))
+                eventEnd = PLACamOutput.createEvent(
+                    PLACamOutput.EventTypes.SessionEnd, dateEnd,
+                    entityList = [
+                        PLACamOutput.createPersonProfile('vmwork', person),
+                        PLACamOutput.createEntityAppDevice('application', 
+                                                           'valgrind'),
+                        PLACamOutput.createItemVersion(None, role="commands",
+                                                       text = outputText)
+                        ],
+                    contextList = [context])
+                    
+                # And add the two events to the tuple
+                sessions[index][2][eventBegin.get('id')] = eventBegin
+                sessions[index][2][eventEnd.get('id')] = eventEnd
 
-                # The context
-                context = PLACamOutput.createContext(session = sessions[index][3])
-
-                # And the event
-                event = PLACamOutput.createEvent(PLACamOutput.EventTypes.Valgrind, \
-                                                     dateEvent, \
-                                                     entityList = entities, \
-                                                     contextList = [context])
-                # And add the event to the session
-                sessions[index][2][event.get('id')] = event
-                
                 # Reset values
                 dateEvent = None
                 command = None
@@ -682,23 +720,23 @@ def toolProcessFirefox(userName, sessions):
     Given the user and the session files, parse the events in the firefox file
     and add them to the corresponding session
 
-    <event id = ??
-           datetime = given>
-      <entity>
-        <application>firefox</application>
-        <personProfile id="vmwork"/>
-        <item type="firefox-visit">url</item>
-      </entity>
+    <event type="VisitURL" datetime="date/time" id="...">
+      <application refId="Id pointing to 'firefox'/>
+      <personProfile personId="..." name="vmwork"/>
+      <itemVersion refId="item with the URL"/>
       <context>
         <session id="session Id"/>
       </context>
     </event>
+
+    <item id="...">The URL</item>
     """
     
     # Obtain the the files with the bash history data
     dataDir = os.path.join(userName, 'home', 'teleco', '.pladata', 'tools', 
                            'firefox')
-    dataFiles = glob.glob(os.path.join(dataDir, 'firefox') + '_[0-9]*_[0-9]*')
+    dataFiles = glob.glob(os.path.join(dataDir, 'firefox') + \
+                              '_[0-9]*_[0-9][0-9][0-9][0-9][0-9]')
     dataFiles.sort()
     
     dbg('Processing firefox data files')
@@ -724,19 +762,18 @@ def toolProcessFirefox(userName, sessions):
             # the sessions list.
             counter = counter + 1
             person = PLACamOutput.createPerson(os.path.basename(userName))
-            profile = PLACamOutput.createPersonProfile('vmwork', person)
-            
-            itemElement = PLACamOutput.createItemVersion(None, text = url)
-            
-            entity = PLACamOutput.createEntity(personProfile = profile,
-                                               application = 'firefox',
-                                               itemVersion = itemElement)
-            
-            context = PLACamOutput.createContext(session = sessions[index][3])
+
 
             event = PLACamOutput.createEvent(
-                PLACamOutput.EventTypes.Firefox, dateEvent,
-                entityList = [entity], contextList = [context])
+                PLACamOutput.EventTypes.VisitURL, dateEvent,
+                entityList = [\
+                    PLACamOutput.createPersonProfile('vmwork', person),
+                    PLACamOutput.createEntityAppDevice('application', 'firefox'),
+                    PLACamOutput.createItemVersion(None, text = url)
+                    ],
+                contextList = [\
+                    PLACamOutput.createContext(session = sessions[index][3])
+                    ])
 
             # Add the event to the session data structure
             sessions[index][2][event.get('id')] = event
@@ -746,23 +783,35 @@ def toolProcessFirefox(userName, sessions):
 
 def toolProcessLog(prefix, userName, sessions):
     """
-    Given an event logged as:
+    Given an event logged with a single line such as :
 
     status DATE BEGIN DATE END COMMAND 
+
     Example:
     0 2010-06-29 13:12:01 2010-06-29 13:12:21 'command'
     
-    Create the structure
+    Create the following elements
 
-    <event type='prefix' datetime=DATE BEGIN until=DATE END>
-      <entity>
-        <application>prefix</application>
-        <personProfile id="vmwork" personId="REF TO USER"/>
-      </entity>
+    <event type="SessionBegin" datetime="begin time" id="...">
+      <personProfile personId="..." name="vmwork"/>
+      <application refId="id pointing to the given prefix"/>
       <context>
         <session id="session Id"/>
       </context>
     </event>
+
+    <event type="SessionEnd" datetime="End time" id="...">
+      <personProfile personId="..." name="vmwork"/>
+      <application refId="id pointing to the given prefix"/>
+      <context>
+        <session id="session Id"/>
+      </context>
+    </event>
+
+    <session name="PREFIX_session_id of sesionBegin" 
+             id="..." begin="begin date/time" 
+             end="end date/time"/>
+
     """
     
     dataDir = os.path.join(userName, 'home', 'teleco', '.pladata', 'tools', 
@@ -782,13 +831,16 @@ def toolProcessLog(prefix, userName, sessions):
         # Loop over all the lines
         for line in dataFile:
 
+            # Skip the empty lines
+            if line == '\n':
+                continue
+
             # Detect dates
             fields = line.split()
             dateBegin = datetime.datetime.strptime(' '.join(fields[1:3]),
                                                      '%Y-%m-%d %H:%M:%S')
             dateEnd = datetime.datetime.strptime(' '.join(fields[3:5]), 
                                                      '%Y-%m-%d %H:%M:%S')
-                                                  
 
             # Find to which file this session belongs
             index = locateEventInSession(sessions, dateBegin, dateEnd)
@@ -797,44 +849,88 @@ def toolProcessLog(prefix, userName, sessions):
             if index == None:
                 print 'Discarding command ' + line[:-1]
                 continue
-
+            
             counter = counter + 1
+            # Create the session element with begin/end date/times
+            sessionElement = PLACamOutput.createSession(prefix + '_'
+                                                        + sessions[index][3],
+                                                        dateBegin, dateEnd)
+            
+            # Create the person element to be inserted in the SessionBegin
             person = PLACamOutput.createPerson(os.path.basename(userName))
-            profile = PLACamOutput.createPersonProfile('vmwork', person)
             
-            itemV = PLACamOutput.createItemVersion(None, 
-                                                   text = ' '.join(fields[5:-1]))
+            # Create a context with two session elements distinguished by a
+            # role
+            context = PLACamOutput.createContext(session = sessionElement)
+
+            # Create the SessionBegin and SessionEnd events
+            eventBegin = PLACamOutput.createEvent(
+                PLACamOutput.EventTypes.SessionBegin, dateBegin,
+                entityList = [
+                    PLACamOutput.createPersonProfile('vmwork', person),
+                    PLACamOutput.createEntityAppDevice('application', 
+                                                       prefix)
+                    ],
+                contextList = [context])
             
-            entity = PLACamOutput.createEntity(personProfile = profile,
-                                               application = prefix,
-                                               itemVersion = itemV)
+            # Create a duplicate of the context to be inserted in the end
+            # event as well
+            context = PLACamOutput.createContext(session = sessionElement)
+                
+            eventEnd = PLACamOutput.createEvent(
+                PLACamOutput.EventTypes.SessionEnd, dateEnd,
+                entityList = [
+                    PLACamOutput.createPersonProfile('vmwork', person),
+                    PLACamOutput.createEntityAppDevice('application', 
+                                                       prefix)
+                    ],
+                contextList = [context])
             
-            context = PLACamOutput.createContext(
-                session = sessions[index][3])
-            
-            event = PLACamOutput.createEvent(
-                PLACamOutput.EventTypes.OtherCommand, dateBegin,
-                until = dateEnd,
-                entityList = [entity], contextList = [context])
-            
-            # Add the event to the session data structure
-            sessions[index][2][event.get('id')] = event
-        
+            # And add the two events to the tuple
+            sessions[index][2][eventBegin.get('id')] = eventBegin
+            sessions[index][2][eventEnd.get('id')] = eventEnd
+
         dbg('  Added ' + str(counter) + ' new commands.')
         dataFile.close()
 
 def parseLastFile(sessionLines, userDir):
     """
     Given a set of lines from the last command parse its content and creates as
-    many session files at the same level as detected.
+    many session tuples as detected.
 
-    Return a list of tuples with the following structure:
+    Returns a list of tuples with the following structure:
 
     (filename, [date from, date two], Dict[id] = element, session element)
+
+    - filename is the file where the events of the session will be stored
+    - [date from, date two] is the begin/end session times
+    - Dict[id] is a dictionary of the event elements in the session
+    - session is the element capturing the session information
 
     The idea is to parse these lines, populate the empty set to contain all the
     events to be added to the file, and add them in one shot (open, parse,
     write, close) in a single call afterwards.
+
+    Elements created:
+
+    <event type="SessionBegin" datetime="begin time" id="...">
+      <personProfile personId="..." name="vmwork"/>
+      <application refId="id pointing to 'virtualbox'"/>
+      <context>
+        <session refId="session id"/>
+      </context>
+    </event>
+
+    <event type="SessionEnd" datetime="begin time" id="...">
+      <personProfile personId="..." name="vmwork"/>
+      <application refId="id pointing to 'virtualbox'"/>
+      <context>
+        <session refId="session id"/>
+      </context>
+    </event>
+
+    <session name="File name" id="..." begin="begin date/time" 
+             end="end date/time"/>
     """
 
     dbg(' Parsing sessionlines')
@@ -889,27 +985,30 @@ def parseLastFile(sessionLines, userDir):
         # Create the data structure with the basic session information
         sessionDataFileName = nameStart + '_' + nameEnd
 
-        # Session events containing session begin, session end
-        person = PLACamOutput.createPerson(os.path.basename(userDir))
-        profile = PLACamOutput.createPersonProfile('vmwork', 
-                                                   person)
-        entity = PLACamOutput.createEntity(personProfile = profile)
-
+        # Session element to be referenced
         sessionElement = \
             PLACamOutput.createSession(getSessionIdFromName(sessionDataFileName),
                                        sessionDates[0],
                                        sessionDates[1])
         
-        context = PLACamOutput.createContext(session = sessionElement)
+        # Session events containing session begin, session end
+        person = PLACamOutput.createPerson(os.path.basename(userDir))
 
         eventStart = PLACamOutput.createEvent(
-            PLACamOutput.EventTypes.SessionStart, sessionDates[0],
-            entityList = [entity],
-            contextList = [context])
+            PLACamOutput.EventTypes.SessionBegin, sessionDates[0],
+            entityList = [
+                PLACamOutput.createPersonProfile('vmwork', person),
+                PLACamOutput.createEntityAppDevice('application', 'virtualbox')
+                ],
+            contextList = [PLACamOutput.createContext(session = sessionElement)])
 
         eventEnd = PLACamOutput.createEvent(
             PLACamOutput.EventTypes.SessionEnd, sessionDates[1],
-            contextList = [context])
+            entityList = [
+                PLACamOutput.createPersonProfile('vmwork', person),
+                PLACamOutput.createEntityAppDevice('application', 'virtualbox')
+                ],
+            contextList = [PLACamOutput.createContext(session = sessionElement)])
 
         # Insert the data for the session
         sessions.append((sessionDataFileName, sessionDates, 
@@ -1071,7 +1170,7 @@ def getSessionIdFromName(name):
     Given the name of a file containing a session, guess the Id of that session
     """
 
-    return 'SessionStart_' + name.split('_')[0]
+    return 'SessionBegin_' + name.split('_')[0]
 
 
 def locateEventInSession(sessions, stamp, tend = None):
