@@ -369,12 +369,9 @@ def toolProcessBash(userName, sessions):
         # Loop over all the lines
         for line in dataFile:
 
-            # Detect and skip empty lines
-            if line == '\n':
-                continue
-
-            # Detect and skip lines only with #
-            if re.match('^#\n$', line):
+            # Detect and skip empty lines, MS-DOS empty lines, # only
+            if re.match('^[ ]*\n$', line) or re.match('^\r\n$', line) or \
+                    re.match('^#[ ]*\n$', line):
                 continue
 
             # Detect timestamp
