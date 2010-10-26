@@ -18,6 +18,9 @@ plaDirectory = os.path.expanduser('~/.pladata')
 # Default options
 _debug = False
 _givenUserSet = set([])
+_toolNames = set(['bash', 'gcc', 'gdb', 'valgrind', 'firefox', 'kate', 
+                  'kdevelop'])
+_fromDate = None
 
 # Regular expression to filter log files
 _logFileFilter = re.compile('.+\.tgz')
@@ -25,39 +28,77 @@ _logFileFilter = re.compile('.+\.tgz')
 def main():
     """
 
-    <script> [-d] [-u username] [-t toolname] svnDirectory
+    <script> [-d] [-u username] [-s] [-t toolname] [-f datetime]
+             svnDirectory
 
     Process a directory under subversion control containing log files.
 
     -d    Turns on debugging.
 
     -u username Select only this username (it might appear several times)
+
+    -f datetime Ignore all events/sessions before the given date/time
+                The format is yyyy-mm-dd hh:mm
  
+    -s    Detect only the sessions, no tool processing
+
+    -t toolname Process the logs for this tools. The valid names are:
+
+                'bash', 'gcc', 'gdb', 'valgrind', 'firefox', 'kate', 
+                  'kdevelop'
+
+                If no option -t is given, all of them are processed
+
     The svnDirectory should be .pladata where the *.tgz files are stored.
+
 
     """
 
     global _debug
     global _logFileFilter
     global _givenUserSet
+    global _toolNames
+    global _fromDate
 
     # Swallow the options
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   "du:t:")
+                                   "dsu:t:f:")
     except getopt.GetoptError, e:
         print e.msg
         print main.__doc__
         sys.exit(2)
 
     # Process the arguments
+    givenTools = set([])
+    sessionsOnly = False
     for optstr, value in opts:
         if optstr == "-d":
             _debug = True
+        if optstr == "-s":
+            sessionsOnly = True
+        if optstr == "-f":
+            try:
+                _fromDate = datetime.datetime.strptime(value, \
+                                                           '%Y-%m-%d %H:%M')
+            except ValueError, e:
+                print 'Incorrect date with option -f. Format should be:'
+                print 'YYYY-MM-DD HH:MM'
+                sys.exit(2)
+        if optstr == "-t":
+            givenTools.add(value)
+            if not value in _toolNames:
+                print 'Incorrect tool name with option -t. Valid names:'
+                print _toolNames
+                sys.exit(1)
         elif optstr == '-u':
             _givenUserSet.add(value)
 
     dbg('Checking if the argument is correctly given')
+
+    # All parameters in _givenUserSet need to have a 'users' prefix
+    _givenUserSet = set(map(lambda x: os.path.join('users', x),
+                            _givenUserSet))
 
     # If no argument is given terminate.
     if len(args) == 0:
@@ -75,6 +116,10 @@ def main():
         print main.__doc__
         sys.exit(2)
 
+    # If no tool is given, process all of them
+    if givenTools == set([]):
+        givenTools = _toolNames
+
     # Remember the initial dir
     initialDir = os.getcwd()
 
@@ -83,6 +128,7 @@ def main():
     for dirName in args:
 
         # Change to the given directory
+        os.chdir(initialDir)
         dbg('Changing current dir to ' + str(dirName))
         os.chdir(dirName)
 
@@ -90,25 +136,33 @@ def main():
         expandTarFiles()
 
         # Calculate the users to process
-        filterUsers()
+        usersToProcess = filterUsers()
 
         dbg('Processing users: ' + ', '.join(_givenUserSet))
 
         # If no user is given terminate
-        if _givenUserSet == set([]):
+        if usersToProcess == set([]):
             print 'No users to process.'
             sys.exit(2)
 
         userFiles = []
-        for userName in _givenUserSet:
+        for userName in usersToProcess:
             # Obtain user sessions
             sessions = obtainSessions(userName)
             # sessions.sort(key = lambda x: x[1][0])
 
             dbg('Detected ' + str(len(sessions)) + ' sessions.')
 
+            # If only the sessions needed to be processed, ignore the rest of
+            # the loop
+            if sessionsOnly:
+                for session in sessions:
+                    print str(session[0]) + ' ' + str(session[1][0]) + ' ' + \
+                        str(session[1][1])
+                continue
+
             # Classify all the events for the user
-            toolProcess(userName, sessions)
+            toolProcess(userName, sessions, givenTools)
 
             # Write data into session files
             sessionFiles = writeSessionFiles(userName, sessions)
@@ -117,15 +171,16 @@ def main():
             # Create files in the data dir to group the events in different ways
             writeUserAuxiliaryDataFiles(userName, sessionFiles)
 
-            
-        # Dump the addittional elements stored in the Cam Output
-        createdFiles.append(PLACamOutput.writeElements())
+        # Create some additional files only if the tools have been processed.
+        if not sessionsOnly:
+            # Dump the addittional elements stored in the Cam Output
+            createdFiles.append(PLACamOutput.writeElements())
 
-        # Create a file including all the generated files
-        writeMasterFile(createdFiles)
+            # Create a file including all the generated files
+            writeMasterFile(createdFiles)
 
-        # Restore initialDir
-        os.chdir(initialDir)
+    # Restore initialDir
+    os.chdir(initialDir)
 
 def expandTarFiles():
     """
@@ -167,7 +222,7 @@ def expandTarFiles():
             dbg('Begin process file: ' + tarFileName)
         else:
             # Tar file has been processed alrady
-            dbg('Skip file: ' + tarFileName)
+            dbg('Already processed. Skip: ' + tarFileName)
             continue
 
         logMsg = svnClient.log(tarFileName, limit = 1)
@@ -247,24 +302,31 @@ def obtainSessions(userDir):
     # Proceed to parse all lines and create session data
     return parseLastFile(sessionLines, userDir)
 
-def toolProcess(userName, sessions):
+def toolProcess(userName, sessions, givenTools):
     """
     Process the files for each tool
     """
 
-    toolProcessBash(userName, sessions)
+    if 'bash' in givenTools:
+        toolProcessBash(userName, sessions)
 
-    toolProcessGcc(userName, sessions)
+    if 'gcc' in givenTools:
+        toolProcessGcc(userName, sessions)
 
-    toolProcessGdb(userName, sessions)
+    if 'gdb' in givenTools:
+        toolProcessGdb(userName, sessions)
 
-    toolProcessValgrind(userName, sessions)
+    if 'valgrind' in givenTools:
+        toolProcessValgrind(userName, sessions)
 
-    toolProcessFirefox(userName, sessions)
+    if 'firefox' in givenTools:
+        toolProcessFirefox(userName, sessions)
 
-    toolProcessLog('kate', userName, sessions)
+    if 'kate' in givenTools:
+        toolProcessLog('kate', userName, sessions)
 
-    toolProcessLog('kdevelop', userName, sessions)
+    if 'kdevelop' in givenTools:
+        toolProcessLog('kdevelop', userName, sessions)
 
 def toolProcessBash(userName, sessions):
     """
@@ -311,8 +373,12 @@ def toolProcessBash(userName, sessions):
             if line == '\n':
                 continue
 
+            # Detect and skip lines only with #
+            if re.match('^#\n$', line):
+                continue
+
             # Detect timestamp
-            if line.startswith('#'):
+            if re.match('^#[0-9]+\n', line):
                 stamp = datetime.datetime.fromtimestamp(float(line[1:]))
                 continue
             
@@ -546,8 +612,7 @@ def toolProcessGdb(userName, sessions):
 
                 # Create the dbg session element with begin/end date/times
                 sessionElement = \
-                    PLACamOutput.createSession('GDB_' + sessions[index][3],
-                                               dateEvent, dateEnd)
+                    PLACamOutput.createSession('GDB_', dateEvent, dateEnd)
 
                 # Create the person element to be inserted in the SessionBegin
                 person = PLACamOutput.createPerson(os.path.basename(userName))
@@ -620,7 +685,7 @@ def toolProcessValgrind(userName, sessions):
       </context>
     </event>
 
-    <item id="...">All the commands, one per line</item>
+    <item id="...">All the messages, one per line</item>
     <session name="Valgrind_session_id of sessionBegin" 
              id="..." begin="begin date/time" 
              end="end date/time"/>
@@ -670,8 +735,7 @@ def toolProcessValgrind(userName, sessions):
 
                 # Create the dbg session element with begin/end date/times
                 sessionElement = \
-                    PLACamOutput.createSession('Valgrind_' + sessions[index][3],
-                                               dateEvent, dateEnd)
+                    PLACamOutput.createSession('Valgrind_', dateEvent, dateEnd)
 
                 # Create the person element to be inserted in the SessionBegin
                 person = PLACamOutput.createPerson(os.path.basename(userName))
@@ -855,12 +919,11 @@ def toolProcessLog(prefix, userName, sessions):
             if index == None:
                 print 'Discarding command ' + line[:-1]
                 continue
-            
+
             counter = counter + 1
             # Create the session element with begin/end date/times
-            sessionElement = PLACamOutput.createSession(prefix + '_'
-                                                        + sessions[index][3],
-                                                        dateBegin, dateEnd)
+            sessionElement = PLACamOutput.createSession(prefix, dateBegin, 
+                                                        dateEnd)
             
             # Create the person element to be inserted in the SessionBegin
             person = PLACamOutput.createPerson(os.path.basename(userName))
@@ -939,16 +1002,22 @@ def parseLastFile(sessionLines, userDir):
              end="end date/time"/>
     """
 
+    global _fromDate
+
     dbg(' Parsing sessionlines')
     
     # Open and loop over each line in the data file
     sessions = []
+    lineNumber = 0
     for line in sessionLines:
+
+        lineNumber = lineNumber + 1
 
         # Skip lines with no data
         if line.startswith('reboot') or line == '\n' or \
                 line.startswith('wtmp') or \
                 (line.find('down') != -1):
+            dbg(' Skipping reboot line (' + str(lineNumber) + ')')
             continue
         
         # Split line in fields
@@ -970,16 +1039,25 @@ def parseLastFile(sessionLines, userDir):
 
         # Skipping lines with no second date nor "still logged" message
         if sessionDates[1] == None and (line.find('still logged') == -1):
+            dbg(' Skipping session no second date (' + str(lineNumber) + ')')
             continue
 
         # Skip the sessions that have an empty duration
         if sessionDates[0] == sessionDates[1]:
-            dbg(' Skipping empty session')
+            dbg(' Skipping empty session (' + str(lineNumber) + ')')
             continue
 
         # Skip the sessions with reversed dates
         if sessionDates[0] > sessionDates[1]:
-            dbg(' Skipping reversed session')
+            dbg(' Skipping reversed session (' + str(lineNumber) + ')')
+            continue
+
+        # Skip sessions before the _fromDate if given
+        if _fromDate != None and \
+                sessionDates[0] < _fromDate and \
+                sessionDates[0] < _fromDate:
+            dbg(' Skipping session outside valid window (' + str(lineNumber) \
+                    + ')')
             continue
 
         # Decide the name of the session file
@@ -1020,7 +1098,8 @@ def parseLastFile(sessionLines, userDir):
         sessions.append((sessionDataFileName, sessionDates, 
                          PLACamOutput.insertElements({},
                                                      [eventStart, 
-                                                      eventEnd]), sessionElement))
+                                                      eventEnd]),
+                         sessionElement))
 
     # Add an extra entry to catch events that do not fall in any of the sessions
     sessions.append(('EventsInNoSession.xml', [None, None], {}, None))
@@ -1284,17 +1363,16 @@ def filterUsers():
         if os.path.isdir(name):
             userDirs.add(name)
 
-    # Take union or intersection depending on value of global var
+    # If there are no restrictions, return all found users
     if _givenUserSet == set([]):
-        _givenUserSet = userDirs
-    else:
-        _givenUserSet = set(map(lambda x: os.path.join('users', x),
-                                _givenUserSet))
-        intersect = _givenUserSet & userDirs
-        if intersect != _givenUserSet:
+        return userDirs
+
+    # Take the intersection with the given users
+    intersect = _givenUserSet & userDirs
+    if intersect != _givenUserSet:
             print 'Unknown users: ' + ' '.join(_givenUserSet - userDirs)
-            _givenUserSet = intersect
-    return
+
+    return intersect
 
 def createRootElement(rootname, nsUrl, otherNSUrl = []):
     """
