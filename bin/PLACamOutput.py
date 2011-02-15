@@ -6,7 +6,7 @@
 
 # Import conditionally either regular xml support or lxml if present
 
-import datetime, hashlib, rfc822, xml.sax.saxutils
+import datetime, hashlib, rfc822, xml.sax.saxutils, sys
 
 try:
     from lxml import etree
@@ -238,7 +238,11 @@ def createItem(attribs, elems = [], text = None):
 
     # If CDATA is given, attach it
     if text != None:
-        result.text = xml.sax.saxutils.escape(text)
+        try:
+            result.text = xml.sax.saxutils.escape(text)
+        except ValueError, e:
+            # A ValueError I think it means that is not unicode
+            result.text = xml.sax.saxutils.escape(unicode(text, 'utf-8'))
 
     return lookupElement(result)
 
@@ -317,6 +321,8 @@ def writeElements():
     toWrite.write(fileName, encoding = 'utf-8', xml_declaration = True,
                   method = 'xml', pretty_print = True)
     
+    # Reset the global variable to produce the next file
+    _elements = {}
     return fileName
     
 if __name__ == "__main__":

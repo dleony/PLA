@@ -4,7 +4,7 @@
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
 import os, sys, tarfile, getopt, pysvn, re, shutil, subprocess, datetime, glob
-import codecs
+import codecs, locale
 
 from lxml import etree
 
@@ -21,6 +21,7 @@ _givenUserSet = set([])
 _toolNames = set(['bash', 'gcc', 'gdb', 'valgrind', 'firefox', 'kate', 
                   'kdevelop'])
 _fromDate = None
+_expandOnly = False
 
 # Regular expression to filter log files
 _logFileFilter = re.compile('.+\.tgz')
@@ -28,7 +29,7 @@ _logFileFilter = re.compile('.+\.tgz')
 def main():
     """
 
-    <script> [-d] [-u username] [-s] [-t toolname] [-f datetime]
+    <script> [-d] [-x] [-u username] [-s] [-t toolname] [-f datetime]
              svnDirectory
 
     Process a directory under subversion control containing log files.
@@ -49,6 +50,8 @@ def main():
 
                 If no option -t is given, all of them are processed
 
+     -x    Execute only the tar expansion step (requires access to svn server)
+
     The svnDirectory should be .pladata where the *.tgz files are stored.
 
 
@@ -59,11 +62,20 @@ def main():
     global _givenUserSet
     global _toolNames
     global _fromDate
+    global _expandOnly
+
+    # Fix the output encoding when redirecting stdout
+    if sys.stdout.encoding is None:
+        (lang, enc) = locale.getdefaultlocale()
+        if enc is not None:
+            (e, d, sr, sw) = codecs.lookup(enc)
+            # sw will encode Unicode data to the locale-specific character set.
+            sys.stdout = sw(sys.stdout)
 
     # Swallow the options
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   "dsu:t:f:")
+                                   "dsxu:t:f:")
     except getopt.GetoptError, e:
         print e.msg
         print main.__doc__
@@ -75,6 +87,8 @@ def main():
     for optstr, value in opts:
         if optstr == "-d":
             _debug = True
+        if optstr == "-x":
+            _expandOnly = True
         if optstr == "-s":
             sessionsOnly = True
         if optstr == "-f":
@@ -124,7 +138,6 @@ def main():
     initialDir = os.getcwd()
 
     # Loop over the given dirs
-    createdFiles = []
     for dirName in args:
 
         # Change to the given directory
@@ -132,8 +145,15 @@ def main():
         dbg('Changing current dir to ' + str(dirName))
         os.chdir(dirName)
 
+        # Collect all the files created in each directory
+        createdFiles = []
+
         # Expand the content of the tar files
         expandTarFiles()
+
+        # Finish the iteration here if only expanding
+        if _expandOnly:
+            continue
 
         # Calculate the users to process
         usersToProcess = filterUsers()
@@ -211,28 +231,32 @@ def expandTarFiles():
         sys.exit(2)
         
     # Get list of files to process
-    filesToProcess = [os.path.basename(a[0]['repos_path']) \
-                          for a in svnClient.list('.', recurse = False) \
-                          if _logFileFilter.match(a[0]['repos_path'])]
+    try:
+        filesToProcess = [st.path \
+                              for st in svnClient.status('.', recurse = False) \
+                              if _logFileFilter.match(st.path) and \
+                              st.is_versioned]
+    except pysvn.ClientError, e:
+        print 'Error obtaining the status of tar files'
+        syy.exit(2)
+
     dbg('Files to process: ' + str(filesToProcess))
 
     # Process each detected tar file
     for tarFileName in filesToProcess:
-        if not os.path.exists(os.path.join(processedDataDir, tarFileName)):
-            dbg('Begin process file: ' + tarFileName)
-        else:
+        if os.path.exists(os.path.join(processedDataDir, tarFileName)):
             # Tar file has been processed alrady
             dbg('Already processed. Skip: ' + tarFileName)
             continue
-
+        
         logMsg = svnClient.log(tarFileName, limit = 1)
         # If the file has no logs, skip its processing
         if logMsg == []:
             dbg(' No logs found for file. Skipping')
             continue
         userName = logMsg[0]['author']
-        dbg(' User = ' + userName)
 
+        dbg('Begin process file: ' + tarFileName + ' User = ' + userName)
         # If the directory does not exist, create it
         userDir = os.path.join('users', userName)
         if not os.path.exists(userDir):
@@ -349,7 +373,9 @@ def toolProcessBash(userName, sessions):
     
     # Commands that even though the appear as bash, they require special
     # processing thus, they are processed somewhere else.
-    skipCommands = set(['gcc', 'valgrind', 'gdb', 'kate', 'kdevelop'])
+    skipCommands = set(['gcc', 'valgrind', 'gdb', 'kate', 'kdevelop',
+                        '/usr/bin/gcc', '/usr/bin/valgrind', '/usr/bin/gdb', 
+                        '/usr/bin/kate', '/usr/bin/kdevelop'])
 
     # Obtain the the files with the bash history data
     dataDir = os.path.join(userName, 'home', 'teleco')
@@ -375,8 +401,9 @@ def toolProcessBash(userName, sessions):
                 continue
 
             # Detect timestamp
-            if re.match('^#[0-9]+\n', line):
-                stamp = datetime.datetime.fromtimestamp(float(line[1:]))
+            if re.match('^#[0-9]+', line):
+                milliseconds = float(line.split('#')[1])
+                stamp = datetime.datetime.fromtimestamp(milliseconds)
                 continue
             
             # Chop the command line to find out if it is one of the special
@@ -384,7 +411,7 @@ def toolProcessBash(userName, sessions):
             # processing because it is done in other specific function.
             fields = line.split()
             if os.path.basename(fields[0]) in skipCommands:
-                dbg(' Skipping cmd ' + os.path.basename(fields[0]))
+                # dbg(' Skipping cmd ' + os.path.basename(fields[0]))
                 continue
 
             # Find to which file this session belongs
@@ -450,7 +477,7 @@ def toolProcessGcc(userName, sessions):
     # Loop over all the gcc files
     for dataFileName in dataFiles:
         dbg(' ' + dataFileName)
-        dataFile = codecs.open(dataFileName, 'r', 'utf-8')
+        dataFile = codecs.open(dataFileName, 'r')
 
         counter = 0
         errorText = ''
@@ -459,83 +486,103 @@ def toolProcessGcc(userName, sessions):
         inOutput = False
         dateEvent = None
         command = None
-        lineNumber = 1
-        # Loop over all the lines in the file
-        for line in dataFile:
-            
-            # Beginning of log (and error message)
-            if re.match('^\-BEGIN .+$', line):
-                # Beginning of log
-                inError = True
-                inOutput = False
-                fields = line.split()
-                dateEvent = datetime.datetime.strptime(' '.join(fields[4:6]),
-                                                       '%Y-%m-%d %H:%M:%S')
-                command = ' '.join(fields[6:])
-
-                # Find to which file this session belongs
-                index = locateEventInSession(sessions, dateEvent)
-
-                dbg(' Detected begin of GCC session')
-                continue
-
-            # Beginning of output message
-            if re.match('^\-O .+$', line):
-                inError = False
-                inOutput = True
-                continue
-
-            if re.match('^\-END$', line):
-
-                dbg(' Detected end of GCC session')
-
-                # Create the event element
-                person = PLACamOutput.createPerson(os.path.basename(userName))
+        lineNumber = 0
+        ignoreEvent = False
+        try:
+            # Loop over all the lines in the file
+            for line in dataFile:
+                # Keep counting lines
+                lineNumber = lineNumber + 1
                 
-                # Entities in the event (personProfile, application and item as
-                # command 
-                entityList = [\
-                    PLACamOutput.createPersonProfile('vmwork', person),
-                    PLACamOutput.createEntityAppDevice('application', 'gcc'),
-                    PLACamOutput.createItemVersion(None, role = 'command', 
-                                                   text = command)
-                    ]
+                # Beginning of log (and error message)
+                if re.match('^\-BEGIN .+$', line):
+                    # Beginning of log
+                    inError = True
+                    inOutput = False
+                    fields = line.split()
+                    dateEvent = datetime.datetime.strptime(' '.join(fields[4:6]),
+                                                           '%Y-%m-%d %H:%M:%S')
+                    command = ' '.join(fields[6:])
+
+                    # Find to which file this session belongs
+                    index = locateEventInSession(sessions, dateEvent)
+
+                    # Mark some recorded events as bogus
+                    if re.search('/usr/bin/gcc \-xc\+\+ \-E \-v /dev/null', 
+                                line) or \
+                       re.search('/usr/bin/gcc \-xc\+\+ \-E \-dM /dev/null',
+                                line):
+                        ignoreEvent = True
+
+                    continue
+
+                # Beginning of output message
+                if re.match('^\-O .+$', line):
+                    inError = False
+                    inOutput = True
+                    continue
+
+                if re.match('^\-END$', line):
+
+                    if not ignoreEvent:
+                        # Create the event element
+                        person = PLACamOutput.createPerson(os.path.basename(userName))
+                        
+                        # Entities in the event (personProfile, application and
+                        # item as command
+                        entityList = [\
+                            PLACamOutput.createPersonProfile('vmwork', person),
+                            PLACamOutput.createEntityAppDevice('application', 
+                                                               'gcc'),
+                            PLACamOutput.createItemVersion(None, 
+                                                           role = 'command', 
+                                                           text = command)
+                            ]
                 
-                # Extend the entities with the error messages
-                entityList.extend(PLAGccMessages.filterGccMsgs(errorText + \
-                                                                   outputText))
-                # Create the event
-                event = PLACamOutput.createEvent(
-                    PLACamOutput.EventTypes.BashCommand, 
-                    dateEvent,
-                    entityList = entityList,
-                    contextList = [\
-                        PLACamOutput.createContext(session = sessions[index][3])
-                        ])
+                        # Extend the entities with the error messages
+                        entityList.extend(PLAGccMessages.filterGccMsgs(errorText + \
+                                                                           outputText))
+                        # Create the event
+                        event = PLACamOutput.createEvent(
+                            PLACamOutput.EventTypes.BashCommand, 
+                            dateEvent,
+                            entityList = entityList,
+                            contextList = [\
+                                PLACamOutput.createContext(session = 
+                                                           sessions[index][3])])
 
-                # And add the event to the session
-                sessions[index][2][event.get('id')] = event
+                        # And add the event to the session
+                        sessions[index][2][event.get('id')] = event
 
+                    
+                    # Reset all flags to keep parsing
+                    errorText = ''
+                    outputText = ''
+                    ignoreEvent = False
+                    inError = False
+                    inOutput = False
+                    dateEvent = None
+                    command = None
 
-                # Reset all flags to keep parsing
-                errorText = ''
-                outputText = ''
-                inError = False
-                inOutput = False
-                dateEvent = None
-                command = None
+                    continue
 
-                continue
+                # If the event is going to be ignore, forget about the line
+                if ignoreEvent:
+                    continue
 
-            # Regular line in the middle of the log file
-            if inError:
-                errorText += line
-            elif inOutput:
-                outputText += line
-            else:
-                print 'line ' + str(lineNumber) + ' inconsistent in ' + \
-                    dataFileName
-                sys.exit(2)
+                # Regular line in the middle of the log file
+                if inError:
+                    errorText += line
+                elif inOutput:
+                    outputText += line
+                else:
+                    print 'line ' + str(lineNumber) + ' inconsistent in ' + \
+                        dataFileName
+                    sys.exit(2)
+        except UnicodeDecodeError, e:
+            print e
+            print 'File', dataFileName, ', Line', lineNumber
+            print 'Line: ', line[:-1]
 
 def toolProcessGdb(userName, sessions):
     """
@@ -600,13 +647,10 @@ def toolProcessGdb(userName, sessions):
                 # Find to which file this session belongs
                 index = locateEventInSession(sessions, dateEvent)
 
-                dbg(' Detected begin of GDB session')
                 continue
 
             # End of log
             if re.match('^\-END$', line):
-                dbg(' Detected end of GDB session')
-
                 # Create the dbg session element with begin/end date/times
                 sessionElement = \
                     PLACamOutput.createSession('GDB_', dateEvent, dateEnd)
@@ -696,7 +740,7 @@ def toolProcessValgrind(userName, sessions):
     
     dbg('Processing valgrind data files')
 
-    # Loop over all the gcc files
+    # Loop over all the valgrind files
     for dataFileName in dataFiles:
         dbg(' ' + dataFileName)
         dataFile = codecs.open(dataFileName, 'r', 'utf-8')
@@ -704,9 +748,11 @@ def toolProcessValgrind(userName, sessions):
         outputText = ''
         dateEvent = None
         command = None
+        lineNumber = 0
         # Loop over all the lines in the file
         for line in dataFile:
             
+            lineNumber = lineNumber + 1
             # Skip the empty lines
             if line == '\n':
                 continue
@@ -723,13 +769,10 @@ def toolProcessValgrind(userName, sessions):
                 # Find to which file this session belongs
                 index = locateEventInSession(sessions, dateEvent)
 
-                dbg(' Detected begin of Valgrind session')
                 continue
 
             # End of log
             if re.match('^\-END [0-9]+', line):
-                dbg(' Detected end of Valgrind session')
-
                 # Create the dbg session element with begin/end date/times
                 sessionElement = \
                     PLACamOutput.createSession('Valgrind_', dateEvent, dateEnd)
@@ -779,8 +822,9 @@ def toolProcessValgrind(userName, sessions):
                 outputText = ''
                 continue
 
-            # Regular line
-            outputText += line
+            # Regular line (skip if binary code is detected, though
+            if not re.search('\x01', line):
+                outputText += line
 
 def toolProcessFirefox(userName, sessions):
     """
@@ -904,11 +948,14 @@ def toolProcessLog(prefix, userName, sessions):
 
             # Detect dates
             fields = line.split()
-            dateBegin = datetime.datetime.strptime(' '.join(fields[1:3]),
+            try:
+                dateBegin = datetime.datetime.strptime(' '.join(fields[1:3]),
+                                                       '%Y-%m-%d %H:%M:%S')
+                dateEnd = datetime.datetime.strptime(' '.join(fields[3:5]), 
                                                      '%Y-%m-%d %H:%M:%S')
-            dateEnd = datetime.datetime.strptime(' '.join(fields[3:5]), 
-                                                     '%Y-%m-%d %H:%M:%S')
-
+            except ValueError, e:
+                # Line does not match a date
+                continue
             # Find to which file this session belongs
             index = locateEventInSession(sessions, dateBegin, dateEnd)
 

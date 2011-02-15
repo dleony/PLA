@@ -69,7 +69,7 @@ def main():
     PLABasic.logMessage(prefix + ': command status = ' + str(originalStatus))
 
     if doLogging:
-        dataOut.write('-END ' + str(originalStatus))
+        dataOut.write('-END ' + str(originalStatus) + '\n')
         dataOut.close()
 
     sys.exit(originalStatus)
