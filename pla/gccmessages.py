@@ -7,7 +7,7 @@
 import os, sys, re, codecs, locale
 from lxml import etree
 
-import PLACamOutput
+import camoutput
 
 sys.stdin = codecs.getreader(locale.getpreferredencoding())(sys.stdin)
 

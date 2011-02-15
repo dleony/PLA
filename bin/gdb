@@ -5,9 +5,23 @@
 #
 import os, sys, subprocess, datetime
 
-import PLABasic
+# Fix the output encoding when redirecting stdout
+if sys.stdout.encoding is None:
+    (lang, enc) = locale.getdefaultlocale()
+    if enc is not None:
+        (e, d, sr, sw) = codecs.lookup(enc)
+        # sw will encode Unicode data to the locale-specific character set.
+        sys.stdout = sw(sys.stdout)
 
-dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'gdb')
+# Import the Adagio package
+_dirName = os.path.dirname(__file__)
+_dirName = os.path.abspath(os.path.join(_dirName, '..'))
+sys.path.insert(0, _dirName)
+sys.path.insert(0, os.path.join(_dirName, 'pla'))
+
+import pla
+
+dataDir = os.path.join(pla.plaDirectory, 'tools', 'gdb')
 dataFile = os.path.join(dataDir, 'gdb')
 gdbHistoryFile = os.path.expanduser('~/.gdb_history')
 
@@ -21,8 +35,8 @@ def main():
     global dataFile
     global gdbHistoryFile
 
-    PLABasic.logMessage("gdb: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("gdb: DataFile = " + dataFile)
+    pla.logMessage("gdb: plaDirectory = " + pla.plaDirectory)
+    pla.logMessage("gdb: DataFile = " + dataFile)
 
     # Modify the first argument to point to the true executable
     sys.argv[0] = '/usr/bin/gdb'
@@ -30,7 +44,7 @@ def main():
     # Execute the given gdb command regularly
     dateBegin = str(datetime.datetime.now())[:-7]
     try:
-        PLABasic.logMessage('gdb: executing ' + str(sys.argv))
+        pla.logMessage('gdb: executing ' + str(sys.argv))
         givenCmd = subprocess.Popen(sys.argv)
     except OSError, e:		  
         print 'File not found (PLA)'
@@ -44,11 +58,11 @@ def main():
 
     # Store the return status to return when the script finishes.
     originalStatus = givenCmd.returncode
-    PLABasic.logMessage('gdb: command status = ' + str(originalStatus))
+    pla.logMessage('gdb: command status = ' + str(originalStatus))
 
     # If no file is present in pladirectory, no instrumentation
     if not os.path.exists(dataDir):
-        PLABasic.logMessage("gdb: Disabled. Skipping")
+        pla.logMessage("gdb: Disabled. Skipping")
         sys.exit(originalStatus)
 
     # If file is present in pladirectory, begin instrumentation
@@ -61,7 +75,7 @@ def main():
 
     # If history file is not there, nothing else to do
     if not os.path.exists(gdbHistoryFile):
-        PLABasic.logMessage('gdb: No ~/.gdb_history file. Misconfig?')
+        pla.logMessage('gdb: No ~/.gdb_history file. Misconfig?')
         gdbDataOut.close()
         sys.exit(originalStatus)
 

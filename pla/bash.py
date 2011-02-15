@@ -3,11 +3,14 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os
+import sys, os
 
-import PLABasic
+sys.path.insert(0, 
+                os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'bash')
+import pla
+
+dataDir = os.path.join(pla.plaDirectory, 'tools', 'bash')
 dataFile = os.path.expanduser('~/.bash_history')
 
 def main(): 

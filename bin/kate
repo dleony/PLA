@@ -5,9 +5,23 @@
 #
 import os, sys
 
-import PLABasic
+# Fix the output encoding when redirecting stdout
+if sys.stdout.encoding is None:
+    (lang, enc) = locale.getdefaultlocale()
+    if enc is not None:
+        (e, d, sr, sw) = codecs.lookup(enc)
+        # sw will encode Unicode data to the locale-specific character set.
+        sys.stdout = sw(sys.stdout)
 
-dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'kate')
+# Import the Adagio package
+_dirName = os.path.dirname(__file__)
+_dirName = os.path.abspath(os.path.join(_dirName, '..'))
+sys.path.insert(0, _dirName)
+sys.path.insert(0, os.path.join(_dirName, 'pla'))
+
+import pla
+
+dataDir = os.path.join(pla.plaDirectory, 'tools', 'kate')
 dataFile = os.path.join(dataDir, 'kate')
 
 def main(): 
@@ -19,13 +33,13 @@ def main():
     global dataDir
     global dataFile
 
-    PLABasic.logMessage("kate: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("kate: DataFile = " + dataFile)
+    pla.logMessage("kate: plaDirectory = " + pla.plaDirectory)
+    pla.logMessage("kate: DataFile = " + dataFile)
 
     # Modify the first argument to point to the true executable
     sys.argv[0] = '/usr/bin/kate'
 
-    sys.exit(PLABasic.executeAndLogExecution(dataDir, dataFile, 'kate'))
+    sys.exit(pla.executeAndLogExecution(dataDir, dataFile, 'kate'))
 
 if __name__ == "__main__":
     main()

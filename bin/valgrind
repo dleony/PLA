@@ -5,9 +5,23 @@
 #
 import os, sys, subprocess, datetime
 
-import PLABasic
+# Fix the output encoding when redirecting stdout
+if sys.stdout.encoding is None:
+    (lang, enc) = locale.getdefaultlocale()
+    if enc is not None:
+        (e, d, sr, sw) = codecs.lookup(enc)
+        # sw will encode Unicode data to the locale-specific character set.
+        sys.stdout = sw(sys.stdout)
 
-dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'valgrind')
+# Import the Adagio package
+_dirName = os.path.dirname(__file__)
+_dirName = os.path.abspath(os.path.join(_dirName, '..'))
+sys.path.insert(0, _dirName)
+sys.path.insert(0, os.path.join(_dirName, 'pla'))
+
+import pla
+
+dataDir = os.path.join(pla.plaDirectory, 'tools', 'valgrind')
 dataFile = os.path.join(dataDir, 'valgrind')
 
 def main(): 
@@ -19,21 +33,21 @@ def main():
     global dataDir
     global dataFile
 
-    PLABasic.logMessage('valgrind: preparing ' + dataFile)
+    pla.logMessage('valgrind: preparing ' + dataFile)
 
 
     # Modify the first argument to point to the true executable
     sys.argv[0] = '--error-exitcode=1'
     sys.argv.insert(0, '/usr/bin/valgrind')
 
-    # sys.exit(PLABasic.executeAndLogExecution(dataDir, dataFile, 'valgrind'))
+    # sys.exit(pla.executeAndLogExecution(dataDir, dataFile, 'valgrind'))
 
     # Execute the given command normally
 
     prefix = 'valgrind'
     dateBegin = str(datetime.datetime.now())[:-7]
     try:
-        PLABasic.logMessage(prefix + ': executing ' + str(sys.argv))
+        pla.logMessage(prefix + ': executing ' + str(sys.argv))
         givenCmd = subprocess.Popen(sys.argv, stderr = subprocess.PIPE)
     except OSError, e:		  
         print 'File not found (PLA)'
@@ -54,7 +68,7 @@ def main():
                           + ' '.join(map(lambda x: '\'' + x + '\'', sys.argv)) \
                           + '\n')
     else:
-        PLABasic.logMessage(prefix + ': Disabled. Skipping')
+        pla.logMessage(prefix + ': Disabled. Skipping')
 
     # Loop until the end of stderr of the given command
     for line in givenCmd.stderr:
@@ -66,7 +80,7 @@ def main():
     givenCmd.wait()
     # Store the return status to return when the script finishes.
     originalStatus = givenCmd.returncode
-    PLABasic.logMessage(prefix + ': command status = ' + str(originalStatus))
+    pla.logMessage(prefix + ': command status = ' + str(originalStatus))
 
     if doLogging:
         dataOut.write('-END ' + str(originalStatus) + '\n')

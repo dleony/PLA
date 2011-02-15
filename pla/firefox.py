@@ -5,9 +5,12 @@
 #
 import os, sys, datetime, ConfigParser, sqlite3, shutil
 
-import PLABasic
+sys.path.insert(0, 
+                os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'firefox')
+import pla
+
+dataDir = os.path.join(pla.plaDirectory, 'tools', 'firefox')
 dataFile = os.path.join(dataDir, 'firefox')
 
 _tmpFile = os.path.join('/tmp', 'places.sqlite')
@@ -22,11 +25,11 @@ def prepareDataFile(suffix):
     global dataFile
     global _tmpFile
 
-    PLABasic.logMessage('firefox: prepare ' + dataFile)
+    pla.logMessage('firefox: prepare ' + dataFile)
 
     # If no file is present in pladirectory, no instrumentation
     if not os.path.exists(dataDir):
-        PLABasic.logMessage('firefox: Disabled. Skipping')
+        pla.logMessage('firefox: Disabled. Skipping')
         return []
 
     # Copy the Firefox SQLite database to the tmp directory, in order to avoid
@@ -39,12 +42,12 @@ def prepareDataFile(suffix):
     profileDir = os.path.join(ffoxDir, config.get('Profile0', 'Path'))
         
     sqliteFile = os.path.join(profileDir, 'places.sqlite')
-    PLABasic.logMessage('firefox: duplicating file ' + sqliteFile)
+    pla.logMessage('firefox: duplicating file ' + sqliteFile)
     shutil.copyfile(sqliteFile, _tmpFile)
         
     # Get the timestamp for the last execution
-    lastExecution = PLABasic.getLastExecutionTStamp()
-    PLABasic.logMessage('Last execution: ' + str(lastExecution))
+    lastExecution = pla.getLastExecutionTStamp()
+    pla.logMessage('Last execution: ' + str(lastExecution))
 
     date_clause = ''
     if lastExecution != None:
@@ -61,7 +64,7 @@ def prepareDataFile(suffix):
           FROM   moz_historyvisits h, moz_places p
           WHERE  h.place_id = p.id
           """ + date_clause + """ ORDER  BY visit_date """
-    PLABasic.logMessage('firefox: Query = ' + query)
+    pla.logMessage('firefox: Query = ' + query)
     c.execute(query)
 
     # Create a duplicate of the data file with the suffix
@@ -81,7 +84,7 @@ def prepareDataFile(suffix):
     # Remove the profile copy form the tmp directory
     os.remove(_tmpFile)
     if noData:
-        PLABasic.logMessage('firefox empty data file detected. Removing')
+        pla.logMessage('firefox empty data file detected. Removing')
         os.remove(toSendFileName)
         return []
 

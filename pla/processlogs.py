@@ -8,7 +8,7 @@ import codecs, locale
 
 from lxml import etree
 
-import PLACamOutput, PLAGccMessages
+import camoutput, gccmessages
 
 _rdfNS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
 

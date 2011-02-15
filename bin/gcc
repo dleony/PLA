@@ -5,9 +5,23 @@
 #
 import os, sys, subprocess, datetime
 
-import PLABasic
+# Fix the output encoding when redirecting stdout
+if sys.stdout.encoding is None:
+    (lang, enc) = locale.getdefaultlocale()
+    if enc is not None:
+        (e, d, sr, sw) = codecs.lookup(enc)
+        # sw will encode Unicode data to the locale-specific character set.
+        sys.stdout = sw(sys.stdout)
 
-dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'gcc')
+# Import the Adagio package
+_dirName = os.path.dirname(__file__)
+_dirName = os.path.abspath(os.path.join(_dirName, '..'))
+sys.path.insert(0, _dirName)
+sys.path.insert(0, os.path.join(_dirName, 'pla'))
+
+import pla
+
+dataDir = os.path.join(pla.plaDirectory, 'tools', 'gcc')
 dataFile = os.path.join(dataDir, 'gcc')
 
 def main(): 
@@ -19,15 +33,15 @@ def main():
     global dataDir
     global dataFile
 
-    PLABasic.logMessage("gcc: plaDirectory = " + PLABasic.plaDirectory)
-    PLABasic.logMessage("gcc: DataFile = " + dataFile)
+    pla.logMessage("gcc: plaDirectory = " + pla.plaDirectory)
+    pla.logMessage("gcc: DataFile = " + dataFile)
 
     # Modify the first argument to point to the true executable
     sys.argv[0] = '/usr/bin/gcc'
 
     # Execute the given gcc command regularly
     try:
-        PLABasic.logMessage('gcc: executing ' + str(sys.argv))
+        pla.logMessage('gcc: executing ' + str(sys.argv))
         givenCmd = subprocess.Popen(sys.argv, stdout = subprocess.PIPE,
                                     stderr = subprocess.PIPE)
     except OSError, e:		  
@@ -42,24 +56,24 @@ def main():
 
     # Store the return status to return when the script finishes.
     originalStatus = givenCmd.returncode
-    PLABasic.logMessage('gcc: command status = ' + str(originalStatus))
+    pla.logMessage('gcc: command status = ' + str(originalStatus))
 
     # Dump output and error if not None
     if gccError != None:
-        PLABasic.logMessage('gcc: stderr string')
+        pla.logMessage('gcc: stderr string')
         sys.stderr.write(gccError)
     else:
-        PLABasic.logMessage('gcc: No error string')
+        pla.logMessage('gcc: No error string')
 
     if gccOutput != None:
-        PLABasic.logMessage('gcc: stdout string')
+        pla.logMessage('gcc: stdout string')
         sys.stdout.write(gccOutput)
     else:
-        PLABasic.logMessage('gcc: No output string')
+        pla.logMessage('gcc: No output string')
 
     # If no file is present in pladirectory, no instrumentation
     if not os.path.exists(dataDir):
-        PLABasic.logMessage("gcc: Disabled. Skipping")
+        pla.logMessage("gcc: Disabled. Skipping")
         sys.exit(originalStatus)
 
     # Append the captured messages to the file with a separator

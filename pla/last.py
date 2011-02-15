@@ -3,14 +3,16 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, datetime, subprocess, shutil
+import sys, os, datetime, subprocess, shutil
 
-import PLABasic
+sys.path.insert(0, 
+                os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-dataDir = os.path.join(PLABasic.plaDirectory, 'tools', 'last')
+import pla
+
+dataDir = os.path.join(pla.plaDirectory, 'tools', 'last')
 dataFile = os.path.expanduser('~/.lastrc')
 logPrefix = 'last'
-
 
 def prepareDataFile(suffix):
     """ 
@@ -25,11 +27,11 @@ def prepareDataFile(suffix):
     global logPrefix
 
     # Log the execution of this function
-    PLABasic.logMessage(logPrefix + ': prepare ' + dataFile)
+    pla.logMessage(logPrefix + ': prepare ' + dataFile)
 
     # If no file is present in pladirectory, nothing to return
     if not os.path.exists(dataDir):
-        PLABasic.logMessage(logPrefix + ': Disabled. Skipping')
+        pla.logMessage(logPrefix + ': Disabled. Skipping')
         return []
 
     # Prepare the file to catch the output of the last command
@@ -39,7 +41,7 @@ def prepareDataFile(suffix):
     # Execute the last command and store its output
     try:
         command = ['/usr/bin/ĺast', '-F']
-        PLABasic.logMessage(logPrefix + ': executing ' + ' '.join(command))
+        pla.logMessage(logPrefix + ': executing ' + ' '.join(command))
         givenCmd = subprocess.Popen(command, executable = '/usr/bin/last', \
                                         stdout = dataOut)
     except OSError, e:		  
@@ -57,7 +59,7 @@ def prepareDataFile(suffix):
 
     # If the file is empty, done
     if os.path.getsize(toSendFileName) == 0:
-        PLABasic.logMessage(logPrefix + ': No data to send')
+        pla.logMessage(logPrefix + ': No data to send')
         return []
 
 
