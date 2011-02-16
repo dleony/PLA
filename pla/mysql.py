@@ -78,7 +78,22 @@ def disconnect():
     passwd = None
     dbconnection.close()
     dbconnection = None
-    cursosObj = None
+    cursorObj = None
+
+def selectPerson(personID):
+    """
+    Selects from the Relatedentity table the person with the given ID
+    """
+    
+    global cursorObj
+
+    # Fetch the information about the entity with the userID
+    query = """
+        SELECT * FROM Relatedentity WHERE type = 'person' and name = %s
+            """
+    cursorObj.execute(query, (personID,))
+
+    return
 
 # Example
 # execute SQL query using execute() method.
