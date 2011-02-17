@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-#
 #
 # Copyright (C) 2010 Carlos III University of Madrid
-# This file is part of the Adagio: Agile Distributed Authoring Toolkit
+# This file is part of the PLA: Personal Learning Assistant
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@ if sys.stdout.encoding is None:
         # sw will encode Unicode data to the locale-specific character set.
         sys.stdout = sw(sys.stdout)
 
-# Import the Adagio package
+# Import the PLA package
 _dirName = os.path.dirname(__file__)
 _dirName = os.path.abspath(os.path.join(_dirName, '..'))
 sys.path.insert(0, _dirName)
@@ -44,11 +44,11 @@ def main():
     Script that given a matrix encoded in a CSV file with the following
     structure:
     
-    EMTPY;Label1;Label2;...;LabelN
-    UserID1;Value1;Value2;...;ValueN
-    UserID2;Value1;Value2;...;ValueN
+    EMTPY,Label1,Label2,...,LabelN
+    UserID1,Value1,Value2,...,ValueN
+    UserID2,Value1,Value2,...,ValueN
     ...
-    UserIDM;Value1;Value2;...;ValueN
+    UserIDM,Value1,Value2,...,ValueN
 
     and the parameters to connect to a relational database:
       - host
@@ -89,7 +89,7 @@ def main():
 
     -n When given, the queries are printed instead of executed
 
-    -s char Character to use as separator (default ';')
+    -s char Character to use as separator (default ',')
 
     Example:
     Insert (dry run)
@@ -109,7 +109,7 @@ def main():
     dbname = None
     dryRun = False
     drop = False
-    separator = ';'
+    separator = ','
 
     # Swallow the options
     try:
@@ -120,11 +120,11 @@ def main():
 
     # Parse the options
     for optstr, value in opts:
-        # Hostname
+        # DB Name
         if optstr == "-d":
             dbname = value
 
-        # dbname
+        # Hostname
         elif optstr == "-h":
             hostname = value
 
@@ -132,7 +132,7 @@ def main():
         elif optstr == "-n":
             dryRun = True
 
-        # Username
+        # Passwd
         elif optstr == "-p":
             passwd = value
 
