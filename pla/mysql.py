@@ -21,7 +21,7 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import sys, MySQLdb
+import sys, MySQLdb, hashlib
 
 host = None
 user = None
@@ -94,6 +94,47 @@ def selectPerson(personID):
     cursorObj.execute(query, (personID,))
 
     return
+
+def executeTransaction(query, values, dryRun):
+    """
+    Push the transction, and if failure, retract it and bomb out. If values is a
+    list, the executemany function is used.
+    """
+
+    global cursorObj
+
+    try:
+        if values == None:
+            if dryRun:
+                print query
+            else:
+                cursorObj.execute(query)
+        elif type(values) == list:
+            if dryRun:
+                for x in values:
+                    print query, x
+            else:
+                cursorObj.executemany(query, values)
+        else:
+            if dryRun:
+                print query, values
+            else:
+                cursorObj.execute(query, values)
+        dbconnection.commit()
+    except Exception, e:
+        print '/* Error executing', query, '*/'
+        print str(e)
+        sys.exit(1)
+
+    return
+
+def getHexDigest(item):
+    """
+    Given an item, create an hex digest
+    """
+    m = hashlib.sha1()
+    m.update(str(item))
+    return m.hexdigest()
 
 # Example
 # execute SQL query using execute() method.
