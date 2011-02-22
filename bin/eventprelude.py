@@ -97,9 +97,8 @@ def main():
      The query to obtain his matrix is:
 
 SELECT 
-  ev.id, 
-  ev.name as EventType, 
   ev.datetime, re.name as Person, 
+  ev.name as EventType, 
   rem_program.metadata as Program, 
   rem_section.metadata as Section, 
   rem_pairnumber.metadata as Pair, 
