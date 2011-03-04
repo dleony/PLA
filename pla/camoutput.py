@@ -242,7 +242,8 @@ def createItem(attribs, elems = [], text = None):
             result.text = xml.sax.saxutils.escape(text)
         except ValueError, e:
             # A ValueError I think it means that is not unicode
-            result.text = xml.sax.saxutils.escape(unicode(text, 'utf-8'))
+            # result.text = xml.sax.saxutils.escape(unicode(text, 'utf-8'))
+            result.text = xml.sax.saxutils.escape(text.encode('utf-8'))
 
     return lookupElement(result)
 
