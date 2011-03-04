@@ -194,7 +194,7 @@ def main():
         # Create some additional files only if the tools have been processed.
         if not sessionsOnly:
             # Dump the addittional elements stored in the Cam Output
-            createdFiles.append(PLACamOutput.writeElements())
+            createdFiles.append(camoutput.writeElements())
 
             # Create a file including all the generated files
             writeMasterFile(createdFiles)
@@ -420,19 +420,19 @@ def toolProcessBash(userName, sessions):
             # Create the appropriate event and insert it in the proper bucket of
             # the sessions list.
             counter = counter + 1
-            person = PLACamOutput.createPerson(os.path.basename(userName))
+            person = camoutput.createPerson(os.path.basename(userName))
             
-            event = PLACamOutput.createEvent(
-                PLACamOutput.EventTypes.BashCommand, stamp,
+            event = camoutput.createEvent(
+                camoutput.EventTypes.BashCommand, stamp,
                 entityList = [\
-                    PLACamOutput.createPersonProfile('vmwork', person),
-                    PLACamOutput.createEntityAppDevice('application',
+                    camoutput.createPersonProfile('vmwork', person),
+                    camoutput.createEntityAppDevice('application',
                                                        os.path.basename(fields[0])),
-                    PLACamOutput.createItemVersion(None, role = 'command', 
+                    camoutput.createItemVersion(None, role = 'command', 
                                                    text = line[:-1])
                     ],
                 contextList = [\
-                    PLACamOutput.createContext(session = sessions[index][3])
+                    camoutput.createContext(session = sessions[index][3])
                     ])
 
             # Add the event to the session data structure
@@ -526,29 +526,29 @@ def toolProcessGcc(userName, sessions):
 
                     if not ignoreEvent:
                         # Create the event element
-                        person = PLACamOutput.createPerson(os.path.basename(userName))
+                        person = camoutput.createPerson(os.path.basename(userName))
                         
                         # Entities in the event (personProfile, application and
                         # item as command
                         entityList = [\
-                            PLACamOutput.createPersonProfile('vmwork', person),
-                            PLACamOutput.createEntityAppDevice('application', 
+                            camoutput.createPersonProfile('vmwork', person),
+                            camoutput.createEntityAppDevice('application', 
                                                                'gcc'),
-                            PLACamOutput.createItemVersion(None, 
+                            camoutput.createItemVersion(None, 
                                                            role = 'command', 
                                                            text = command)
                             ]
                 
                         # Extend the entities with the error messages
-                        entityList.extend(PLAGccMessages.filterGccMsgs(errorText + \
+                        entityList.extend(gccmessages.filterGccMsgs(errorText + \
                                                                            outputText))
                         # Create the event
-                        event = PLACamOutput.createEvent(
-                            PLACamOutput.EventTypes.BashCommand, 
+                        event = camoutput.createEvent(
+                            camoutput.EventTypes.BashCommand, 
                             dateEvent,
                             entityList = entityList,
                             contextList = [\
-                                PLACamOutput.createContext(session = 
+                                camoutput.createContext(session = 
                                                            sessions[index][3])])
 
                         # And add the event to the session
@@ -653,24 +653,24 @@ def toolProcessGdb(userName, sessions):
             if re.match('^\-END$', line):
                 # Create the dbg session element with begin/end date/times
                 sessionElement = \
-                    PLACamOutput.createSession('GDB_', dateEvent, dateEnd)
+                    camoutput.createSession('GDB_', dateEvent, dateEnd)
 
                 # Create the person element to be inserted in the SessionBegin
-                person = PLACamOutput.createPerson(os.path.basename(userName))
+                person = camoutput.createPerson(os.path.basename(userName))
 
                 # Create a context with two session elements distinguished by a
                 # role
                 context = \
-                    PLACamOutput.createContext(session = sessionElement)
+                    camoutput.createContext(session = sessionElement)
 
                 # Create the SessionBegin and SessionEnd events
-                eventBegin = PLACamOutput.createEvent(
-                    PLACamOutput.EventTypes.SessionBegin, dateEvent,
+                eventBegin = camoutput.createEvent(
+                    camoutput.EventTypes.SessionBegin, dateEvent,
                     entityList = [
-                        PLACamOutput.createPersonProfile('vmwork', person),
-                        PLACamOutput.createEntityAppDevice('application',
+                        camoutput.createPersonProfile('vmwork', person),
+                        camoutput.createEntityAppDevice('application',
                                                            'gdb'),
-                        PLACamOutput.createItemVersion(None, role="commands",
+                        camoutput.createItemVersion(None, role="commands",
                                                        text = outputText)
                         ],
                     contextList = [context])
@@ -678,14 +678,14 @@ def toolProcessGdb(userName, sessions):
                 # Create a duplicate of the context to be inserted in the end
                 # event as well
                 context = \
-                    PLACamOutput.createContext(session = sessionElement)
+                    camoutput.createContext(session = sessionElement)
 
-                eventEnd = PLACamOutput.createEvent(
-                    PLACamOutput.EventTypes.SessionEnd, dateEnd,
+                eventEnd = camoutput.createEvent(
+                    camoutput.EventTypes.SessionEnd, dateEnd,
                     entityList = [
-                        PLACamOutput.createPersonProfile('vmwork', person),
-                        PLACamOutput.createEntityAppDevice('application', 'gdb'),
-                        PLACamOutput.createItemVersion(None, role="commands",
+                        camoutput.createPersonProfile('vmwork', person),
+                        camoutput.createEntityAppDevice('application', 'gdb'),
+                        camoutput.createItemVersion(None, role="commands",
                                                        text = outputText)
                         ],
                     contextList = [context])
@@ -775,23 +775,23 @@ def toolProcessValgrind(userName, sessions):
             if re.match('^\-END [0-9]+', line):
                 # Create the dbg session element with begin/end date/times
                 sessionElement = \
-                    PLACamOutput.createSession('Valgrind_', dateEvent, dateEnd)
+                    camoutput.createSession('Valgrind_', dateEvent, dateEnd)
 
                 # Create the person element to be inserted in the SessionBegin
-                person = PLACamOutput.createPerson(os.path.basename(userName))
+                person = camoutput.createPerson(os.path.basename(userName))
 
                 # Create a context with two session elements distinguished by a
                 # role
                 context = \
-                    PLACamOutput.createContext(session = sessionElement)
+                    camoutput.createContext(session = sessionElement)
                 # Create the SessionBegin and SessionEnd events
-                eventBegin = PLACamOutput.createEvent(
-                    PLACamOutput.EventTypes.SessionBegin, dateEvent,
+                eventBegin = camoutput.createEvent(
+                    camoutput.EventTypes.SessionBegin, dateEvent,
                     entityList = [
-                        PLACamOutput.createPersonProfile('vmwork', person),
-                        PLACamOutput.createEntityAppDevice('application',
+                        camoutput.createPersonProfile('vmwork', person),
+                        camoutput.createEntityAppDevice('application',
                                                            'valgrind'),
-                        PLACamOutput.createItemVersion(None, role="messages",
+                        camoutput.createItemVersion(None, role="messages",
                                                        text = outputText)
                         ],
                     contextList = [context])
@@ -799,15 +799,15 @@ def toolProcessValgrind(userName, sessions):
                 # Create a duplicate of the context to be inserted in the end
                 # event as well
                 context = \
-                    PLACamOutput.createContext(session = sessionElement)
+                    camoutput.createContext(session = sessionElement)
 
-                eventEnd = PLACamOutput.createEvent(
-                    PLACamOutput.EventTypes.SessionEnd, dateEnd,
+                eventEnd = camoutput.createEvent(
+                    camoutput.EventTypes.SessionEnd, dateEnd,
                     entityList = [
-                        PLACamOutput.createPersonProfile('vmwork', person),
-                        PLACamOutput.createEntityAppDevice('application', 
+                        camoutput.createPersonProfile('vmwork', person),
+                        camoutput.createEntityAppDevice('application', 
                                                            'valgrind'),
-                        PLACamOutput.createItemVersion(None, role="commands",
+                        camoutput.createItemVersion(None, role="commands",
                                                        text = outputText)
                         ],
                     contextList = [context])
@@ -872,18 +872,18 @@ def toolProcessFirefox(userName, sessions):
             # Create the appropriate event and insert it in the proper bucket of
             # the sessions list.
             counter = counter + 1
-            person = PLACamOutput.createPerson(os.path.basename(userName))
+            person = camoutput.createPerson(os.path.basename(userName))
 
 
-            event = PLACamOutput.createEvent(
-                PLACamOutput.EventTypes.VisitURL, dateEvent,
+            event = camoutput.createEvent(
+                camoutput.EventTypes.VisitURL, dateEvent,
                 entityList = [\
-                    PLACamOutput.createPersonProfile('vmwork', person),
-                    PLACamOutput.createEntityAppDevice('application', 'firefox'),
-                    PLACamOutput.createItemVersion(None, text = url)
+                    camoutput.createPersonProfile('vmwork', person),
+                    camoutput.createEntityAppDevice('application', 'firefox'),
+                    camoutput.createItemVersion(None, text = url)
                     ],
                 contextList = [\
-                    PLACamOutput.createContext(session = sessions[index][3])
+                    camoutput.createContext(session = sessions[index][3])
                     ])
 
             # Add the event to the session data structure
@@ -966,35 +966,35 @@ def toolProcessLog(prefix, userName, sessions):
 
             counter = counter + 1
             # Create the session element with begin/end date/times
-            sessionElement = PLACamOutput.createSession(prefix, dateBegin, 
+            sessionElement = camoutput.createSession(prefix, dateBegin, 
                                                         dateEnd)
             
             # Create the person element to be inserted in the SessionBegin
-            person = PLACamOutput.createPerson(os.path.basename(userName))
+            person = camoutput.createPerson(os.path.basename(userName))
             
             # Create a context with two session elements distinguished by a
             # role
-            context = PLACamOutput.createContext(session = sessionElement)
+            context = camoutput.createContext(session = sessionElement)
 
             # Create the SessionBegin and SessionEnd events
-            eventBegin = PLACamOutput.createEvent(
-                PLACamOutput.EventTypes.SessionBegin, dateBegin,
+            eventBegin = camoutput.createEvent(
+                camoutput.EventTypes.SessionBegin, dateBegin,
                 entityList = [
-                    PLACamOutput.createPersonProfile('vmwork', person),
-                    PLACamOutput.createEntityAppDevice('application', 
+                    camoutput.createPersonProfile('vmwork', person),
+                    camoutput.createEntityAppDevice('application', 
                                                        prefix)
                     ],
                 contextList = [context])
             
             # Create a duplicate of the context to be inserted in the end
             # event as well
-            context = PLACamOutput.createContext(session = sessionElement)
+            context = camoutput.createContext(session = sessionElement)
                 
-            eventEnd = PLACamOutput.createEvent(
-                PLACamOutput.EventTypes.SessionEnd, dateEnd,
+            eventEnd = camoutput.createEvent(
+                camoutput.EventTypes.SessionEnd, dateEnd,
                 entityList = [
-                    PLACamOutput.createPersonProfile('vmwork', person),
-                    PLACamOutput.createEntityAppDevice('application', 
+                    camoutput.createPersonProfile('vmwork', person),
+                    camoutput.createEntityAppDevice('application', 
                                                        prefix)
                     ],
                 contextList = [context])
@@ -1115,32 +1115,32 @@ def parseLastFile(sessionLines, userDir):
 
         # Session element to be referenced
         sessionElement = \
-            PLACamOutput.createSession(getSessionIdFromName(sessionDataFileName),
+            camoutput.createSession(getSessionIdFromName(sessionDataFileName),
                                        sessionDates[0],
                                        sessionDates[1])
         
         # Session events containing session begin, session end
-        person = PLACamOutput.createPerson(os.path.basename(userDir))
+        person = camoutput.createPerson(os.path.basename(userDir))
 
-        eventStart = PLACamOutput.createEvent(
-            PLACamOutput.EventTypes.SessionBegin, sessionDates[0],
+        eventStart = camoutput.createEvent(
+            camoutput.EventTypes.SessionBegin, sessionDates[0],
             entityList = [
-                PLACamOutput.createPersonProfile('vmwork', person),
-                PLACamOutput.createEntityAppDevice('application', 'virtualbox')
+                camoutput.createPersonProfile('vmwork', person),
+                camoutput.createEntityAppDevice('application', 'virtualbox')
                 ],
-            contextList = [PLACamOutput.createContext(session = sessionElement)])
+            contextList = [camoutput.createContext(session = sessionElement)])
 
-        eventEnd = PLACamOutput.createEvent(
-            PLACamOutput.EventTypes.SessionEnd, sessionDates[1],
+        eventEnd = camoutput.createEvent(
+            camoutput.EventTypes.SessionEnd, sessionDates[1],
             entityList = [
-                PLACamOutput.createPersonProfile('vmwork', person),
-                PLACamOutput.createEntityAppDevice('application', 'virtualbox')
+                camoutput.createPersonProfile('vmwork', person),
+                camoutput.createEntityAppDevice('application', 'virtualbox')
                 ],
-            contextList = [PLACamOutput.createContext(session = sessionElement)])
+            contextList = [camoutput.createContext(session = sessionElement)])
 
         # Insert the data for the session
         sessions.append((sessionDataFileName, sessionDates, 
-                         PLACamOutput.insertElements({},
+                         camoutput.insertElements({},
                                                      [eventStart, 
                                                       eventEnd]),
                          sessionElement))
