@@ -20,6 +20,10 @@ sys.path.insert(0, _dirName)
 sys.path.insert(0, os.path.join(_dirName, 'pla'))
 
 import pla
+import pla.bash
+import pla.last
+import pla.iwatch
+import pla.firefox
 
 # Load the modules with names without the .py extension
 PLAGcc = imp.load_source('PLAGcc', os.path.join(pla.plaDirectory, 'bin', \
@@ -34,6 +38,12 @@ PLAKdevelop = imp.load_source('PLAKdevelop', \
 PLAValgrind = imp.load_source('PLAValgrind', \
                                   os.path.join(pla.plaDirectory, 'bin', \
                                                    'valgrind'))
+PLAJavac = imp.load_source('PLAJavac', os.path.join(pla.plaDirectory, 'bin', \
+                                                    'javac'))
+PLAArgouml = imp.load_source('PLAArgouml', os.path.join(pla.plaDirectory, 'bin', \
+                                                    'argouml'))
+PLAWebratio = imp.load_source('PLAWebratio', os.path.join(pla.plaDirectory, 'bin', \
+                                                    'webratio'))
 
 def main():
     """
@@ -113,15 +123,15 @@ def svnPostCommit(svnClient, svnPLADirectory):
     ############################################################
     # Bash instrumentation
     ############################################################
-    dataFiles.extend(pla.prepareDataFile(PLABash.dataDir, 
-                                              PLABash.dataFile, 
-                                              'bash',
-                                              tarFileName))
+    dataFiles.extend(pla.prepareDataFile(pla.bash.dataDir, 
+                                             pla.bash.dataFile, 
+                                             'bash',
+                                             tarFileName))
 
     ############################################################
     # Last instrumentation
     ############################################################
-    dataFiles.extend(PLALast.prepareDataFile(tarFileName))
+    dataFiles.extend(pla.last.prepareDataFile(tarFileName))
 
     ############################################################
     # GCC instrumentation
@@ -167,11 +177,39 @@ def svnPostCommit(svnClient, svnPLADirectory):
     ############################################################
     # iWatch instrumentation
     ############################################################
+    dataFiles.extend(pla.prepareDataFile(pla.iwatch.dataDir, 
+                                             pla.iwatch.dataFile, 
+                                             'iwatch',
+                                             tarFileName))
 
     ############################################################
     # Firefox instrumentation
     ############################################################
-    dataFiles.extend(PLAFirefox.prepareDataFile(tarFileName))
+    dataFiles.extend(pla.firefox.prepareDataFile(tarFileName))
+
+    ############################################################
+    # Javac instrumentation
+    ############################################################
+    dataFiles.extend(pla.prepareDataFile(PLAJavac.dataDir,
+                                              PLAJavac.dataFile,
+                                              'javac',
+                                              tarFileName))
+
+    ############################################################
+    # ArgoUML instrumentation
+    ############################################################
+    dataFiles.extend(pla.prepareDataFile(PLAArgouml.dataDir,
+                                              PLAArgouml.dataFile,
+                                              'argouml',
+                                              tarFileName))
+
+    ############################################################
+    # WebRatio instrumentation
+    ############################################################
+    dataFiles.extend(pla.prepareDataFile(PLAWebratio.dataDir,
+                                              PLAWebratio.dataFile,
+                                              'webratio',
+                                              tarFileName))
 
     ############################################################
     pla.logMessage('svn: Data files = ' + str(dataFiles))
@@ -190,12 +228,12 @@ def svnPostCommit(svnClient, svnPLADirectory):
     # REMOVE TEMPORARY FILES
     #
     ############################################################
-    pla.removeTemporaryData(PLABash.dataDir,
-                                 PLABash.dataFile,
+    pla.removeTemporaryData(pla.bash.dataDir,
+                                 pla.bash.dataFile,
                                  'bash',
                                  tarFileName)
-    pla.removeTemporaryData(PLALast.dataDir,
-                                 PLALast.dataFile,
+    pla.removeTemporaryData(pla.last.dataDir,
+                                 pla.last.dataFile,
                                  'last',
                                  tarFileName)
     pla.removeTemporaryData(PLAGcc.dataDir,
@@ -218,8 +256,12 @@ def svnPostCommit(svnClient, svnPLADirectory):
                                  PLAKate.dataFile,
                                  'kate',
                                  tarFileName)
-    pla.removeTemporaryData(PLAFirefox.dataDir,
-                                 PLAFirefox.dataFile,
+    pla.removeTemporaryData(pla.iwatch.dataDir,
+                                 pla.iwatch.dataFile,
+                                 'iwatch',
+                                 tarFileName)
+    pla.removeTemporaryData(pla.firefox.dataDir,
+                                 pla.firefox.dataFile,
                                  'firefox',
                                  tarFileName)
     try:
@@ -268,7 +310,7 @@ def svnPostCommit(svnClient, svnPLADirectory):
     ############################################################
     # Bash reset
     ############################################################
-    pla.resetData(PLABash.dataDir, PLABash.dataFile, 'bash')
+    pla.resetData(pla.bash.dataDir, pla.bash.dataFile, 'bash')
 
     ############################################################
     # Last reset
@@ -303,6 +345,7 @@ def svnPostCommit(svnClient, svnPLADirectory):
     ############################################################
     # iWatch reset
     ############################################################
+    pla.resetData(pla.iwatch.dataDir, pla.iwatch.dataFile, 'iwatch')
 
     ############################################################
     # Firefox reset
