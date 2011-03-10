@@ -82,14 +82,14 @@ def disconnect():
 
 def selectPerson(personID):
     """
-    Selects from the Relatedentity table the person with the given ID
+    Selects from the relatedentity table the person with the given ID
     """
     
     global cursorObj
 
     # Fetch the information about the entity with the userID
     query = """
-        SELECT * FROM Relatedentity WHERE type = 'person' and name = %s
+        SELECT * FROM relatedentity WHERE type = 'person' and name = %s
             """
     cursorObj.execute(query, (personID,))
 
