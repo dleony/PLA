@@ -56,10 +56,10 @@ def main():
       - passwd
       - dbname
       
-    connects to a CAM database and inserts in the RelatedentityMetadata table an
+    connects to a CAM database and inserts in the relatedentitymetadata table an
     entry for each element in the matrix with the following structure:
 
-    INSERT INTO RelatedentityMetadata (metadata, metadataBinding, metadataHash,
+    INSERT INTO relatedentitymetadata (metadata, metadataBinding, metadataHash,
                                        metadataType, relatedentityfk) VALUES
 
     (LabelI=ValueI, 
@@ -91,6 +91,9 @@ def main():
 
     -s char Character to use as separator (default ',')
 
+    -t tablename Name of the table to use in the database (default
+     relatedentitymetadata)
+
     Example:
     Insert (dry run)
     insertusermetadata.py -n -u user -p passwd -d dbname FILE.csv
@@ -110,10 +113,11 @@ def main():
     dryRun = False
     drop = False
     separator = ','
-
+    tableName = 'relatedentitymetadata'
+    
     # Swallow the options
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:u:p:d:rns:", [])
+        opts, args = getopt.getopt(sys.argv[1:], "d:h:np:rs:t:u:", [])
     except getopt.GetoptError, e:
         print str(e)
         sys.exit(2)
@@ -143,6 +147,11 @@ def main():
         # Separator
         elif optstr == "-s":
             separator = value
+
+        # table Name
+        elif optstr == "-t":
+            tableName = value
+
         # Username
         elif optstr == "-u":
             username = value
@@ -165,12 +174,12 @@ def main():
     # Cook up the right query
     if drop:
         mainQuery = """
-            DELETE FROM RelatedentityMetadata
+            DELETE FROM relatedentitymetadata
             WHERE metadata = %s and relatedentityfk = %s
                 """
     else:
         mainQuery = """
-            INSERT INTO RelatedentityMetadata 
+            INSERT INTO relatedentitymetadata 
             (metadata, metadataBinding, metadataHash,
             metadataType, relatedentityfk) VALUES
             (%s, %s, %s, %s, %s)
@@ -232,7 +241,7 @@ def main():
                 
                 # See if there is already some row with this data
                 query = """
-                    SELECT * FROM RelatedentityMetadata
+                    SELECT * FROM relatedentitymetadata
                      WHERE metadata = %s and relatedentityfk = %s
                         """
                 params = (toStore, entityID)
