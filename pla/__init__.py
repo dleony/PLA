@@ -172,7 +172,7 @@ def prepareDataFile(dataDir, dataFile, logPrefix, suffix):
     except IOError, e:
         # If something went wrong, ignore this file
         logMessage(logPrefix + ': IOError when creating duplicate' \
-                       + duplicatedFileName)
+                       + duplicateFileName)
         dumpException(e)
         return []
 
