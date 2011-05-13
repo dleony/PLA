@@ -109,7 +109,7 @@ def filterGccMsgs(text):
             continue
 
         result.append(
-            PLACamOutput.createItemVersion(None, role = 'gccerror', text = line))
+            camoutput.createItemVersion(None, role = 'gccerror', text = line))
 
 
     return result
