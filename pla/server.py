@@ -69,9 +69,12 @@ class TCPHandler(SocketServer.BaseRequestHandler):
 
         acl_file = self.config.get('svn', 'acl_file')
         svn_repo = self.config.get('svn', 'repo')
+        svn_url = self.config.get('svn', 'url')
+
         acl_config = ConfigParser.ConfigParser()
         acl_config.read(acl_file)
-        user_repo = svn_repo + "/" + group + "/" + user
+        user_repo = svn_group + "/" + user
+        user_url = svn_url + user_repo
         acl_config.add_section(user_repo)
         acl_config.set(user_repo, user, 'rw');
         with open(acl_file, 'wb') as conffile:            
@@ -81,7 +84,7 @@ class TCPHandler(SocketServer.BaseRequestHandler):
         os.system("/etc/init.d/apache2 reload")
 
         # output format: OK <user> <password> <user repository URL>
-        return "OK {0} {1} {2}".format(user, pawd, user_repo)
+        return "OK {0} {1} {2}".format(user, pawd, user_url)
 
     def removeUser(self, group, user, pawd):
         # remove a user from the subversion repository
