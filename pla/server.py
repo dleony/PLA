@@ -120,7 +120,7 @@ if __name__ == "__main__":
     config.read("../conf/pla-server.cfg")
 
     HOST = config.get('server', 'host')
-    PORT = config.get('server', 'port')
+    PORT = int(config.get('server', 'port'))
 
     # Create the server, binding to localhost on port 9999
     server = SocketServer.TCPServer((HOST, PORT), TCPHandler)

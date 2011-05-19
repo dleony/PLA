@@ -18,7 +18,7 @@ def getConnection():
     config.read("../conf/pla-client.cfg")
 
     HOST = config.get('server', 'host')
-    PORT = config.get('server', 'port')
+    PORT = int(config.get('server', 'port'))
 
     data = " ".join(sys.argv[1:])
     
