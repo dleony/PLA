@@ -73,7 +73,7 @@ class TCPHandler(SocketServer.BaseRequestHandler):
 
         acl_config = ConfigParser.ConfigParser()
         acl_config.read(acl_file)
-        user_repo = svn_group + "/" + user
+        user_repo = svn_repo + " " + group + "/" + user
         user_url = svn_url + user_repo
         acl_config.add_section(user_repo)
         acl_config.set(user_repo, user, 'rw');
