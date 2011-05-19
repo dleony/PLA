@@ -79,7 +79,8 @@ class TCPHandler(SocketServer.BaseRequestHandler):
 
         # 3. reload svn / apache?
         os.system("/etc/init.d/apache2 reload")
-        
+
+        # output format: OK <user> <password> <user repository URL>
         return "OK {0} {1} {2}".format(user, pawd, user_repo)
 
     def removeUser(self, group, user, pawd):
@@ -107,6 +108,7 @@ class TCPHandler(SocketServer.BaseRequestHandler):
         # 2. reload svn / apache?
         os.system("/etc/init.d/apache2 reload")
         
+        # output format: OK
         return "OK"
         
 

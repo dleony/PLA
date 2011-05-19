@@ -40,7 +40,19 @@ def requestUser(args):
     print "Received: %s." % received
     tokens = data.split()
     if (tokens[0] == "OK"):
+        # new user created, time to store credentials and import a .pladata folder
+        [user, pawd, user_repo] = tokens[1:]
+        config = ConfigParser.ConfigParser()
+        config.read("../conf/pla-client.cfg")
+
+        config.set('client', 'user', user)
+        config.set('client', 'pass', pawd)
+        svn_repo = config.get('server', 'host')
+        svn_repo_url = url + user_repo
         
+        os.mkdir('/tmp/.pladata')
+        svn_client = pysvn.Client()
+        svn_client.import_('/tmp/.pladata', repo_url)
 
 
 def removeUser(args):
