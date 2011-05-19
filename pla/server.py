@@ -125,6 +125,7 @@ if __name__ == "__main__":
     # Create the server, binding to localhost on port 9999
     server = SocketServer.TCPServer((HOST, PORT), TCPHandler)
 
+    print "Starting PLA-SVN server on {0}:{1}...".format(HOST, PORT)
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     server.serve_forever()
