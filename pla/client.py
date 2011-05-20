@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# - *- coding: UTF-8 -*-#
+# -*- coding: UTF-8 -*-#
 #
 # Author: Derick Leony (dleony@it.uc3m.es)
 #
@@ -43,7 +43,7 @@ def requestUser(args):
         # new user created, time to store credentials and import a .pladata folder
         [user, pawd, user_repo] = tokens[1:]
         config = ConfigParser.ConfigParser()
-        config.read("../conf/pla-client.cfg")
+        config.read(os.path.join(pla.plaDirectory, 'conf', 'pla-client.cfg'))
 
         config.set('client', 'user', user)
         config.set('client', 'pass', pawd)

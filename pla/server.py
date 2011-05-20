@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# - *- coding: UTF-8 -*-#
+# -*- coding: UTF-8 -*-#
 #
 # Author: Derick Leony (dleony@it.uc3m.es)
 #
@@ -36,7 +36,7 @@ class TCPHandler(SocketServer.BaseRequestHandler):
 
 
         self.config = ConfigParser.ConfigParser()
-        self.config.read("../conf/pla-server.cfg")
+    	self.config.read(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-server.cfg'))
 
         # call the method according to received command
         if (command == "CREATE"):
@@ -73,14 +73,22 @@ class TCPHandler(SocketServer.BaseRequestHandler):
 
         acl_config = ConfigParser.ConfigParser()
         acl_config.read(acl_file)
-        user_repo = svn_repo + " " + group + "/" + user
-        user_url = svn_url + user_repo
+        user_repo = svn_repo + ":/" + group + "/" + user
+        user_url = svn_url + group + "/" + user + "/"
         acl_config.add_section(user_repo)
         acl_config.set(user_repo, user, 'rw');
         with open(acl_file, 'wb') as conffile:            
             acl_config.write(conffile)
 
-        # 3. reload svn / apache?
+	# 3. create user repository
+	admin_user = self.config.get('svn', 'admin_user')
+	admin_pass = self.config.get('svn', 'admin_pass')
+
+	os.mkdir('/tmp/.pladata')
+	os.system("svn --username {0} --password {1} import -m 'Folder for user {2}' /tmp/.pladata {3}/.pladata".format(admin_user, admin_pass, user, user_url))	
+	os.rmdir('/tmp/.pladata')
+
+        # 4. reload svn / apache?
         os.system("/etc/init.d/apache2 reload")
 
         # output format: OK <user> <password> <user repository URL>
@@ -117,8 +125,7 @@ class TCPHandler(SocketServer.BaseRequestHandler):
 
 if __name__ == "__main__":
     config = ConfigParser.ConfigParser()
-    config.read("../conf/pla-server.cfg")
-
+    config.read(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-server.cfg'))
     HOST = config.get('server', 'host')
     PORT = int(config.get('server', 'port'))
 
