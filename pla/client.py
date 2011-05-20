@@ -4,6 +4,7 @@
 # Author: Derick Leony (dleony@it.uc3m.es)
 #
 import os
+import pysvn
 import socket
 import sys
 import ConfigParser
@@ -13,9 +14,21 @@ sys.path.insert(0,
 
 import pla
 
+def ssl_server_trust_prompt(trust_dict):
+    return True, 1, True
+
+def get_login(realm, username, may_save):
+    config = ConfigParser.ConfigParser()
+    config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-client.cfg')))
+
+    user = config.get('client', 'user')
+    pawd = config.get('client', 'pass')
+    print "svn with credentials: {0} {1}".format(user, pawd)
+    return True, user, pawd, True
+
 def getConnection():
     config = ConfigParser.ConfigParser()
-    config.read("../conf/pla-client.cfg")
+    config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-client.cfg')))
 
     HOST = config.get('server', 'host')
     PORT = int(config.get('server', 'port'))
@@ -30,6 +43,12 @@ def getConnection():
     return sock
 
 def requestUser(args):
+
+    # check that a PLAworkspace folder doesnt exist
+    if (os.path.exists(os.path.expanduser('~/.plaworkspace'))):
+        print "ERROR: User already has a PLA workspace folder."
+        return
+
     sock = getConnection()
     sock.send("CREATE " + " ".join(args) + "\n")
     
@@ -38,22 +57,29 @@ def requestUser(args):
     sock.close()
 
     print "Received: %s." % received
-    tokens = data.split()
+    tokens = received.split()
     if (tokens[0] == "OK"):
-        # new user created, time to store credentials and import a .pladata folder
         [user, pawd, user_repo] = tokens[1:]
+
+        # new user created, time to store credentials and import a .pladata folder
         config = ConfigParser.ConfigParser()
-        config.read(os.path.join(pla.plaDirectory, 'conf', 'pla-client.cfg'))
+        conf_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-client.cfg'))
+        config.read(conf_file)
 
         config.set('client', 'user', user)
         config.set('client', 'pass', pawd)
         svn_repo = config.get('server', 'host')
-        svn_repo_url = url + user_repo
-        
-        os.mkdir('/tmp/.pladata')
-        svn_client = pysvn.Client()
-        svn_client.import_('/tmp/.pladata', repo_url)
 
+        # save the user credentials in configuration file
+        with open(conf_file, 'wb') as configfile:
+            config.write(configfile)
+
+        # finally, checkout the user repository to have a local reference
+        svn_client = pysvn.Client()
+        svn_client.callback_get_login = get_login
+        svn_client.callback_ssl_server_trust_prompt = ssl_server_trust_prompt
+        svn_client.checkout(user_repo, os.path.expanduser('~/.plaworkspace'))
+        
 
 def removeUser(args):
     sock = getConnection()
