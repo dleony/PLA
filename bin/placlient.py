@@ -5,6 +5,7 @@
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
 import os, sys, getopt, locale, pysvn, subprocess, imp
+import datetime, shutil
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
@@ -56,12 +57,45 @@ def get_login(realm, username, may_save):
     pawd = config.get('client', 'pass')
     return True, user, pawd, True
 
+def validate_recording():
+    # 1. if we havent approached the recording date, do nothing
+    # 2. if the end date has passed, only remove the user if created
+    # 3. if we are in the recording stage, check that the user has been created
+
+    config = ConfigParser.ConfigParser()
+    config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-client.cfg')))
+
+    ini_date = datetime.datetime.strptime(config.get('client', 'ini_date')).date()
+    end_date = datetime.datetime.strptime(config.get('client', 'end_date')).date()
+
+    if (datetime.date.today() < ini_date):
+        # recording hasn't started
+        sys.exit(0)
+
+    if (datetime.date.today() > end_date):
+        #recording has finished
+        if (os.path.exists(os.path.expanduser('~/.plaworkspace'))):
+            user = config.get('client', 'user')
+            pawd = config.get('client', 'pass')
+            pla.client.removeUser([user, pawd])
+            shutil.rmtree(os.path.expanduser('~/.plaworkspace'));
+
+        sys.exit(0)
+
+    if (not os.path.exists(os.path.expanduser('~/.plaworkspace'))):
+        group = config.get('client', 'group')
+        token = config.get('client', 'token')
+        pla.client.requestUser([group, token])        
+
+
 def main():
     """
     Application to be run each 5 minutes, it gathers information about
     a set of events, compress the files and send them as a commit
     operation.
     """
+
+    validate_recording()
 
     pla.logMessage("placlient: plaDirectory = " + pla.plaDirectory)
 
