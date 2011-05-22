@@ -6,6 +6,7 @@
 #
 import os, sys, getopt, locale, pysvn, subprocess, imp
 import datetime, shutil
+import ConfigParser
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
@@ -65,8 +66,8 @@ def validate_recording():
     config = ConfigParser.ConfigParser()
     config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-client.cfg')))
 
-    ini_date = datetime.datetime.strptime(config.get('client', 'ini_date')).date()
-    end_date = datetime.datetime.strptime(config.get('client', 'end_date')).date()
+    ini_date = datetime.datetime.strptime(config.get('client', 'ini_date'), '%Y-%m-%d').date()
+    end_date = datetime.datetime.strptime(config.get('client', 'end_date'), '%Y-%m-%d').date()
 
     if (datetime.date.today() < ini_date):
         # recording hasn't started
