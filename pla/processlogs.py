@@ -162,8 +162,8 @@ def main():
 
         # If no user is given terminate
         if usersToProcess == set([]):
-            print 'No users to process.'
-            sys.exit(2)
+            print 'No users to process in', dirName
+            continue
 
         userFiles = []
         for userName in usersToProcess:
@@ -238,7 +238,7 @@ def expandTarFiles():
                               st.is_versioned]
     except pysvn.ClientError, e:
         print 'Error obtaining the status of tar files'
-        syy.exit(2)
+        sys.exit(2)
 
     dbg('Files to process: ' + str(filesToProcess))
 
@@ -392,8 +392,10 @@ def toolProcessBash(userName, sessions):
 
         stamp = datetime.datetime.fromtimestamp(os.stat(historyFileName).st_mtime)
         counter = 0
+        lineNumber = 0
         # Loop over all the lines
         for line in dataFile:
+            lineNumber = lineNumber + 1
 
             # Detect and skip empty lines, MS-DOS empty lines, # only
             if re.match('^[ ]*\n$', line) or re.match('^\r\n$', line) or \
@@ -410,6 +412,11 @@ def toolProcessBash(userName, sessions):
             # commands: gcc, valgrind, gdb, kate, kdevelop. If so, skip the
             # processing because it is done in other specific function.
             fields = line.split()
+
+            # If something weird happened and there are no fields, dumpt the line
+            if len(fields) == 0:
+                continue
+
             if os.path.basename(fields[0]) in skipCommands:
                 # dbg(' Skipping cmd ' + os.path.basename(fields[0]))
                 continue
@@ -477,7 +484,7 @@ def toolProcessGcc(userName, sessions):
     # Loop over all the gcc files
     for dataFileName in dataFiles:
         dbg(' ' + dataFileName)
-        dataFile = codecs.open(dataFileName, 'r')
+        dataFile = codecs.open(dataFileName, 'r', 'utf-8')
 
         counter = 0
         errorText = ''
@@ -1399,6 +1406,9 @@ def filterUsers():
     """
 
     global _givenUserSet
+
+    if not os.path.exists('users'):
+	return set([])
 
     # Create the list of user directories
     userDirs = set([])
