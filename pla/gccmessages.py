@@ -100,13 +100,18 @@ def filterGccMsgs(text):
     result = []
 
     # Parse line by line and detect patterns
+    count = 0
     for line in text.splitlines():
-        index = next((a for a in range(len(_msgs)) if _msgs[a][1].search(line)), 
+        index = next((a for a in range(len(_msgs)) if _msgs[a][1].search(line)),
                      None)
 
         if index == None:
             # Line does not match any expression
             continue
+        count += 1
+
+	if count > 1000:
+	    return result
 
         result.append(
             camoutput.createItemVersion(None, role = 'gccerror', text = line))
