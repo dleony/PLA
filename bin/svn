@@ -3,7 +3,7 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, sys, getopt, locale, pysvn, subprocess, imp
+import os, sys, getopt, locale, pysvn, subprocess, imp, codecs
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
@@ -22,6 +22,8 @@ sys.path.insert(0, os.path.join(_dirName, 'pla'))
 import pla
 
 # Load the modules with names without the .py extension
+PLABash = imp.load_source('PLABash', os.path.join(pla.plaDirectory, 'pla', \
+                                                    'bash.py'))
 PLAGcc = imp.load_source('PLAGcc', os.path.join(pla.plaDirectory, 'bin', \
                                                     'gcc'))
 PLAGdb = imp.load_source('PLAGdb', os.path.join(pla.plaDirectory, 'bin', \
@@ -34,6 +36,10 @@ PLAKdevelop = imp.load_source('PLAKdevelop', \
 PLAValgrind = imp.load_source('PLAValgrind', \
                                   os.path.join(pla.plaDirectory, 'bin', \
                                                    'valgrind'))
+PLAFirefox = imp.load_source('PLAFirefox', os.path.join(pla.plaDirectory, 'pla', \
+                                                   'firefox.py'))
+PLALast = imp.load_source('PLALast', os.path.join(pla.plaDirectory, 'pla', \
+                                                    'last.py'))
 
 def main():
     """
@@ -114,9 +120,9 @@ def svnPostCommit(svnClient, svnPLADirectory):
     # Bash instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLABash.dataDir, 
-                                              PLABash.dataFile, 
-                                              'bash',
-                                              tarFileName))
+                                         PLABash.dataFile, 
+                                         'bash',
+                                         tarFileName))
 
     ############################################################
     # Last instrumentation
@@ -127,42 +133,42 @@ def svnPostCommit(svnClient, svnPLADirectory):
     # GCC instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAGcc.dataDir,
-                                              PLAGcc.dataFile,
-                                              'gcc',
-                                              tarFileName))
+                                         PLAGcc.dataFile,
+                                         'gcc',
+                                         tarFileName))
 
     ############################################################
     # GDB instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAGdb.dataDir,
-                                              PLAGdb.dataFile,
-                                              'gdb',
-                                              tarFileName))
+                                         PLAGdb.dataFile,
+                                         'gdb',
+                                         tarFileName))
 
     ############################################################
     # Valgrind instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAValgrind.dataDir,
-                                              PLAValgrind.dataFile,
-                                              'valgrind',
-                                              tarFileName))
+                                         PLAValgrind.dataFile,
+                                         'valgrind',
+                                         tarFileName))
 
     ############################################################
     # Kdevelop instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAKdevelop.dataDir,
-                                              PLAKdevelop.dataFile,
-                                              'kdevelop',
-                                              tarFileName))
+                                         PLAKdevelop.dataFile,
+                                         'kdevelop',
+                                         tarFileName))
 
 
     ############################################################
     # Kate instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAKate.dataDir,
-                                              PLAKate.dataFile,
-                                              'kate',
-                                              tarFileName))
+                                         PLAKate.dataFile,
+                                         'kate',
+                                         tarFileName))
 
     ############################################################
     # iWatch instrumentation
@@ -191,37 +197,37 @@ def svnPostCommit(svnClient, svnPLADirectory):
     #
     ############################################################
     pla.removeTemporaryData(PLABash.dataDir,
-                                 PLABash.dataFile,
-                                 'bash',
-                                 tarFileName)
+                            PLABash.dataFile,
+                            'bash',
+                            tarFileName)
     pla.removeTemporaryData(PLALast.dataDir,
-                                 PLALast.dataFile,
-                                 'last',
-                                 tarFileName)
+                            PLALast.dataFile,
+                            'last',
+                            tarFileName)
     pla.removeTemporaryData(PLAGcc.dataDir,
-                                 PLAGcc.dataFile,
-                                 'gcc',
-                                 tarFileName)
+                            PLAGcc.dataFile,
+                            'gcc',
+                            tarFileName)
     pla.removeTemporaryData(PLAGdb.dataDir,
-                                 PLAGdb.dataFile,
-                                 'gdb',
-                                 tarFileName)
+                            PLAGdb.dataFile,
+                            'gdb',
+                            tarFileName)
     pla.removeTemporaryData(PLAValgrind.dataDir,
-                                 PLAValgrind.dataFile,
-                                 'valgrind',
-                                 tarFileName)
+                            PLAValgrind.dataFile,
+                            'valgrind',
+                            tarFileName)
     pla.removeTemporaryData(PLAKdevelop.dataDir,
-                                 PLAKdevelop.dataFile,
-                                 'kdevelop',
-                                 tarFileName)
+                            PLAKdevelop.dataFile,
+                            'kdevelop',
+                            tarFileName)
     pla.removeTemporaryData(PLAKate.dataDir,
-                                 PLAKate.dataFile,
-                                 'kate',
-                                 tarFileName)
+                            PLAKate.dataFile,
+                            'kate',
+                            tarFileName)
     pla.removeTemporaryData(PLAFirefox.dataDir,
-                                 PLAFirefox.dataFile,
-                                 'firefox',
-                                 tarFileName)
+                            PLAFirefox.dataFile,
+                            'firefox',
+                            tarFileName)
     try:
         pla.logMessage("svn: update " + svnPLADirectory)
         svnClient.update(svnPLADirectory)

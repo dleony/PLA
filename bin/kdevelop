@@ -3,7 +3,7 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, sys
+import os, sys, locale, codecs
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
