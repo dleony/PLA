@@ -339,7 +339,7 @@ def svnPostUpdate(svnPLADirectory):
         pla.synchronizeFolders(os.path.join(svnPLADirectory, 'feedback'), 
                                     os.path.join(pla.plaDirectory, 'feedback'), 
                                     exclude = ['.*/\.svn/?.*'])
-    except e:
+    except Exception, e:
         pla.dumpException(e)
 
     # Perform the synchronization for the bin, skip the svn admin folders
@@ -347,7 +347,7 @@ def svnPostUpdate(svnPLADirectory):
         pla.synchronizeFolders(os.path.join(svnPLADirectory, 'bin'), 
                                     os.path.join(pla.plaDirectory, 'bin'), 
                                     exclude = ['.*/\.svn/?.*'])
-    except e:
+    except Exception, e:
         pla.dumpException(e)
 
 
