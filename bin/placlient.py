@@ -1,9 +1,12 @@
 #!/usr/bin/python
-# -*- coding: UTF-8 -*-#
+# - *- coding: UTF-8 -*-#
 #
+# Author: Derick Leony (dleony@it.uc3m.es)
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import os, sys, getopt, locale, pysvn, subprocess, imp, codecs
+import os, sys, getopt, locale, pysvn, subprocess, imp
+import datetime, shutil
+import ConfigParser
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
@@ -44,68 +47,80 @@ PLAArgouml = imp.load_source('PLAArgouml', os.path.join(pla.plaDirectory, 'bin',
                                                     'argouml'))
 PLAWebratio = imp.load_source('PLAWebratio', os.path.join(pla.plaDirectory, 'bin', \
                                                     'webratio'))
+def ssl_server_trust_prompt(trust_dict):
+    return True, 1, True
+
+def get_login(realm, username, may_save):
+    config = ConfigParser.ConfigParser()
+    config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-client.cfg')))
+
+    user = config.get('client', 'user')
+    pawd = config.get('client', 'pass')
+    return True, user, pawd, True
+
+def validate_recording():
+    # 1. if we havent approached the recording date, do nothing
+    # 2. if the end date has passed, only remove the user if created
+    # 3. if we are in the recording stage, check that the user has been created
+
+    config = ConfigParser.ConfigParser()
+    config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'pla-client.cfg')))
+
+    ini_date = datetime.datetime.strptime(config.get('client', 'ini_date'), '%Y-%m-%d').date()
+    end_date = datetime.datetime.strptime(config.get('client', 'end_date'), '%Y-%m-%d').date()
+
+    if (datetime.date.today() < ini_date):
+        # recording hasn't started
+        sys.exit(0)
+
+    if (datetime.date.today() > end_date):
+        #recording has finished
+        if (os.path.exists(os.path.expanduser('~/.plaworkspace'))):
+            user = config.get('client', 'user')
+            pawd = config.get('client', 'pass')
+            pla.client.removeUser([user, pawd])
+            shutil.rmtree(os.path.expanduser('~/.plaworkspace'));
+
+        sys.exit(0)
+
+    if (not os.path.exists(os.path.expanduser('~/.plaworkspace'))):
+        group = config.get('client', 'group')
+        token = config.get('client', 'token')
+        pla.client.requestUser([group, token])        
+
 
 def main():
     """
-    Application to take a svn command, execute it regularly and then gather
-    information about a set of events, compress the files and send them also as
-    a commit operation.
+    Application to be run each 5 minutes, it gathers information about
+    a set of events, compress the files and send them as a commit
+    operation.
     """
 
-    pla.logMessage("svn: plaDirectory = " + pla.plaDirectory)
+    validate_recording()
 
-    # Modify the first argument to point to the true executable
-    sys.argv[0] = '/usr/bin/svn'
+    pla.logMessage("placlient: plaDirectory = " + pla.plaDirectory)
 
-    # Execute the given SVN command regularly
-    try:
-        pla.logMessage('svn: executing ' + str(sys.argv))
-        givenCmd = subprocess.Popen(sys.argv)
-    except OSError, e:
-        print 'File not found (PLA)'
-        sys.exit(0)
-    except ValueError, e:
-        print 'Incorrect arguments (PLA)'
-        sys.exit(0)
-        
-    # Wait for the process to terminate
-    givenCmd.wait()
-
-    # Store the return status to return when the script finishes.
-    originalStatus = givenCmd.returncode
-    pla.logMessage('svn: command status = ' + str(originalStatus))
-
-    if originalStatus != 0:
-        pla.logMessage('svn: Terminating due to command failure')
-        sys.exit(0)
-
-    # TO BE DONE: How to detect that the command went OK. If a commit failed it
-    # might be due to network problems, so the additional commit should not be
-    # executed.
-    
     # Fetch the svn client
     svnClient = pysvn.Client()
     svnClient.exception_style = 1
+    svnClient.callback_get_login = get_login
+    svnClient.callback_ssl_server_trust_prompt = ssl_server_trust_prompt
 
     # See if there is a .pladata file, if not, terminate
-    svnPLADirectory = pla.findPLASVNDataDir(svnClient, os.getcwd())
+    svnPLADirectory = pla.findPLASVNDataDir(svnClient, os.path.expanduser('~/.plaworkspace'))
     if svnPLADirectory == None:
-        pla.logMessage("svn: No dir .pladata in SVN")
-        sys.exit(originalStatus)
+        pla.logMessage("placlient: No dir .pladata in SVN")
+        sys.exit(1)
 
-    # If the command is commit or update, execute additional code, if not, we
-    # are done
-    if 'commit' in sys.argv:
-        svnPostCommit(svnClient, svnPLADirectory)
-    elif 'update' in sys.argv:
-        svnPostUpdate(svnPLADirectory)
-    else:
-        pla.logMessage('svn: no additional execution required')
+    # First, we send the data of the user through a commit.
+    # Afterwards, we obtain the last changes in their updates repository.
+    svnSendEvents(svnClient, svnPLADirectory)
+    svnUpdateFiles(svnPLADirectory)
 
     # And terminate gracefully with the status generated by the original SVN
-    sys.exit(originalStatus)
+    sys.exit(0)
 
-def svnPostCommit(svnClient, svnPLADirectory):
+def svnSendEvents(svnClient, svnPLADirectory):
     # 1) Gather information depending on the tool and place it in the proper
     # location
     # 2) Create a TGZ with all the files
@@ -137,42 +152,42 @@ def svnPostCommit(svnClient, svnPLADirectory):
     # GCC instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAGcc.dataDir,
-                                         PLAGcc.dataFile,
-                                         'gcc',
-                                         tarFileName))
+                                              PLAGcc.dataFile,
+                                              'gcc',
+                                              tarFileName))
 
     ############################################################
     # GDB instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAGdb.dataDir,
-                                         PLAGdb.dataFile,
-                                         'gdb',
-                                         tarFileName))
+                                              PLAGdb.dataFile,
+                                              'gdb',
+                                              tarFileName))
 
     ############################################################
     # Valgrind instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAValgrind.dataDir,
-                                         PLAValgrind.dataFile,
-                                         'valgrind',
-                                         tarFileName))
+                                              PLAValgrind.dataFile,
+                                              'valgrind',
+                                              tarFileName))
 
     ############################################################
     # Kdevelop instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAKdevelop.dataDir,
-                                         PLAKdevelop.dataFile,
-                                         'kdevelop',
-                                         tarFileName))
+                                              PLAKdevelop.dataFile,
+                                              'kdevelop',
+                                              tarFileName))
 
 
     ############################################################
     # Kate instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAKate.dataDir,
-                                         PLAKate.dataFile,
-                                         'kate',
-                                         tarFileName))
+                                              PLAKate.dataFile,
+                                              'kate',
+                                              tarFileName))
 
     ############################################################
     # iWatch instrumentation
@@ -212,11 +227,11 @@ def svnPostCommit(svnClient, svnPLADirectory):
                                               tarFileName))
 
     ############################################################
-    pla.logMessage('svn: Data files = ' + str(dataFiles))
+    pla.logMessage('placlient: Data files = ' + str(dataFiles))
 
     # If empty list of data files, terminate
     if dataFiles == []:
-        pla.logMessage("svn: empty tar file")
+        pla.logMessage("placlient: empty tar file")
         return
 
     # TGZ all the data files
@@ -230,42 +245,42 @@ def svnPostCommit(svnClient, svnPLADirectory):
     ############################################################
     pla.removeTemporaryData(pla.bash.dataDir,
                                  pla.bash.dataFile,
-                            'bash',
-                            tarFileName)
+                                 'bash',
+                                 tarFileName)
     pla.removeTemporaryData(pla.last.dataDir,
                                  pla.last.dataFile,
-                            'last',
-                            tarFileName)
+                                 'last',
+                                 tarFileName)
     pla.removeTemporaryData(PLAGcc.dataDir,
-                            PLAGcc.dataFile,
-                            'gcc',
-                            tarFileName)
+                                 PLAGcc.dataFile,
+                                 'gcc',
+                                 tarFileName)
     pla.removeTemporaryData(PLAGdb.dataDir,
-                            PLAGdb.dataFile,
-                            'gdb',
-                            tarFileName)
+                                 PLAGdb.dataFile,
+                                 'gdb',
+                                 tarFileName)
     pla.removeTemporaryData(PLAValgrind.dataDir,
-                            PLAValgrind.dataFile,
-                            'valgrind',
-                            tarFileName)
+                                 PLAValgrind.dataFile,
+                                 'valgrind',
+                                 tarFileName)
     pla.removeTemporaryData(PLAKdevelop.dataDir,
-                            PLAKdevelop.dataFile,
-                            'kdevelop',
-                            tarFileName)
+                                 PLAKdevelop.dataFile,
+                                 'kdevelop',
+                                 tarFileName)
     pla.removeTemporaryData(PLAKate.dataDir,
-                            PLAKate.dataFile,
-                            'kate',
-                            tarFileName)
+                                 PLAKate.dataFile,
+                                 'kate',
+                                 tarFileName)
     pla.removeTemporaryData(pla.iwatch.dataDir,
                                  pla.iwatch.dataFile,
                                  'iwatch',
                                  tarFileName)
     pla.removeTemporaryData(pla.firefox.dataDir,
                                  pla.firefox.dataFile,
-                            'firefox',
-                            tarFileName)
+                                 'firefox',
+                                 tarFileName)
     try:
-        pla.logMessage("svn: update " + svnPLADirectory)
+        pla.logMessage("placlient: update " + svnPLADirectory)
         svnClient.update(svnPLADirectory)
     except pysvn.ClientError, e:
         # Exception when updating, not much we can do, log a message if in
@@ -273,12 +288,11 @@ def svnPostCommit(svnClient, svnPLADirectory):
         pla.dumpException(e)
         # Remove tar file, will not be used
         os.remove(tarFile)
-        return
-    
+        return    
 
     # Add the tar file to subversion
     try:
-        pla.logMessage("svn: add " + tarFile)
+        pla.logMessage("placlient: add " + tarFile)
         svnClient.add(tarFile)
     except pysvn.ClientError, e:
         # Remove tar file, will not be used
@@ -296,7 +310,7 @@ def svnPostCommit(svnClient, svnPLADirectory):
 
     # COMMIT: Final commit of the data directory. If there is a problem, 
     try:
-        pla.logMessage("svn: commit " + tarFile)
+        pla.logMessage("placlient: commit " + tarFile)
         svnClient.checkin(tarFile, 'PLA Automatic commit')
     except pysvn.ClientError, e:
         pla.dumpException(e)
@@ -354,7 +368,7 @@ def svnPostCommit(svnClient, svnPLADirectory):
     # is already taken care of
     return
 
-def svnPostUpdate(svnPLADirectory):
+def svnUpdateFiles(svnPLADirectory):
     """
     Code to execute after an update operation has been detected. 
 
@@ -376,7 +390,7 @@ def svnPostUpdate(svnPLADirectory):
         pla.synchronizeFolders(os.path.join(svnPLADirectory, 'feedback'), 
                                     os.path.join(pla.plaDirectory, 'feedback'), 
                                     exclude = ['.*/\.svn/?.*'])
-    except Exception, e:
+    except e:
         pla.dumpException(e)
 
     # Perform the synchronization for the bin, skip the svn admin folders
@@ -384,7 +398,7 @@ def svnPostUpdate(svnPLADirectory):
         pla.synchronizeFolders(os.path.join(svnPLADirectory, 'bin'), 
                                     os.path.join(pla.plaDirectory, 'bin'), 
                                     exclude = ['.*/\.svn/?.*'])
-    except Exception, e:
+    except e:
         pla.dumpException(e)
 
 

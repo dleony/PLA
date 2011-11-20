@@ -32,4 +32,7 @@ elif [ "$plaDir" != '' ]; then
                                  -e "s;:$plaDir;;")
   # Add the path
   export PATH=$plaDir:$PATH
+
+  # Start the execution of iwatch
+  iwatch -c "echo `date --rfc-3339=seconds` %c\|%e\|%f\|%F >> $HOME/.iwatchlog" -r -e access,close,create,delete,move -X '\..*' $HOME > /dev/null 2>&1 &
 fi
