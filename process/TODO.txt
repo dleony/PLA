@@ -1,0 +1,2 @@
+* Add support to include svn events (logs). Explore the possibility of
+  detecting some other events.
