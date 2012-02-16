@@ -10,7 +10,13 @@ from lxml import etree
 
 import camoutput, gccmessages
 
-_rdfNS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+# Fix the output encoding when redirecting stdout
+if sys.stdout.encoding is None:
+    (lang, enc) = locale.getdefaultlocale()
+    if enc is not None:
+        (e, d, sr, sw) = codecs.lookup(enc)
+        # sw will encode Unicode data to the locale-specific character set.
+        sys.stdout = sw(sys.stdout)
 
 # Directory in user HOME containing the instrumented commands
 plaDirectory = os.path.expanduser('~/.pladata')
@@ -28,9 +34,12 @@ _logFileFilter = re.compile('.+\.tgz')
 
 def main():
     """
+    Script that processes the logs obtained through the use of the virtual
+    machine and subversino and either outputs a CSV file or inserts the events
+    in a database.
 
-    <script> [-d] [-x] [-u username] [-s] [-t toolname] [-f datetime]
-             svnDirectory
+    <script> [-d] [-x] [-u username] [-t toolname] [-f datetime]
+             svn_repository_url
 
     Process a directory under subversion control containing log files.
 
@@ -38,22 +47,19 @@ def main():
 
     -u username Select only this username (it might appear several times)
 
-    -f datetime Ignore all events/sessions before the given date/time
-                The format is yyyy-mm-dd hh:mm
+    -f datetime Process evernt from the given date/time The format is yyyy-mm-dd
+                hh:mm
  
-    -s    Detect only the sessions, no tool processing
-
     -t toolname Process the logs for this tools. The valid names are:
 
                 'bash', 'gcc', 'gdb', 'valgrind', 'firefox', 'kate', 
-                  'kdevelop'
+                'kdevelop'
 
                 If no option -t is given, all of them are processed
 
      -x    Execute only the tar expansion step (requires access to svn server)
 
-    The svnDirectory should be .pladata where the *.tgz files are stored.
-
+    The svn_repository_url is traversed to detect .pladata directories.
 
     """
 
@@ -64,18 +70,10 @@ def main():
     global _fromDate
     global _expandOnly
 
-    # Fix the output encoding when redirecting stdout
-    if sys.stdout.encoding is None:
-        (lang, enc) = locale.getdefaultlocale()
-        if enc is not None:
-            (e, d, sr, sw) = codecs.lookup(enc)
-            # sw will encode Unicode data to the locale-specific character set.
-            sys.stdout = sw(sys.stdout)
-
     # Swallow the options
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   "dsxu:t:f:")
+                                   "dxu:t:f:")
     except getopt.GetoptError, e:
         print e.msg
         print main.__doc__
@@ -83,15 +81,15 @@ def main():
 
     # Process the arguments
     givenTools = set([])
-    sessionsOnly = False
     for optstr, value in opts:
+
         if optstr == "-d":
             _debug = True
-        if optstr == "-x":
+
+        elif optstr == "-x":
             _expandOnly = True
-        if optstr == "-s":
-            sessionsOnly = True
-        if optstr == "-f":
+
+        elif optstr == "-f":
             try:
                 _fromDate = datetime.datetime.strptime(value, \
                                                            '%Y-%m-%d %H:%M')
@@ -99,12 +97,14 @@ def main():
                 print 'Incorrect date with option -f. Format should be:'
                 print 'YYYY-MM-DD HH:MM'
                 sys.exit(2)
-        if optstr == "-t":
+
+        elif optstr == "-t":
             givenTools.add(value)
             if not value in _toolNames:
                 print 'Incorrect tool name with option -t. Valid names:'
                 print _toolNames
                 sys.exit(1)
+
         elif optstr == '-u':
             _givenUserSet.add(value)
 
@@ -114,19 +114,9 @@ def main():
     _givenUserSet = set(map(lambda x: os.path.join('users', x),
                             _givenUserSet))
 
-    # If no argument is given terminate.
-    if len(args) == 0:
-        print 'Script needs at least a directory'
-        print main.__doc__
-        sys.exit(2)
-
-    # If any of the directories does not exist, complain
-    incorrectDir = next((dn for dn in args \
-                             if (not os.path.exists(dn)) or \
-                             (not os.path.isdir(dn))), \
-                            None)
-    if incorrectDir != None:
-        print 'Incorrect argument: ' + incorrectDir
+    # If anything other than a single argument is given, terminate
+    if len(args) 0= 1:
+        print 'Script needs at least a SVN Repository URL'
         print main.__doc__
         sys.exit(2)
 
@@ -134,11 +124,8 @@ def main():
     if givenTools == set([]):
         givenTools = _toolNames
 
-    # Remember the initial dir
-    initialDir = os.getcwd()
-
     # Loop over the given dirs
-    for dirName in args:
+    for svn_url in args:
 
         # Change to the given directory
         os.chdir(initialDir)
@@ -596,8 +583,8 @@ def toolProcessGdb(userName, sessions):
     Given the events logged by the debugger, create the following events:
     
     <event type="SessionBegin" datetime="begin time" id="...">
-      <personProfile personId="..." name="vmwork"/>
       <application refId="id pointing to 'gdb'"/>
+      <personProfile personId="..." name="vmwork"/>
       <itemVersion role="commands" refId="item with the commands"/>
       <context>
         <session id="session Id"/>
@@ -605,8 +592,8 @@ def toolProcessGdb(userName, sessions):
     </event>
 
     <event type="SessionEnd" datetime="End time" id="...">
-      <personProfile personId="..." name="vmwork"/>
       <application refId="id pointing to 'gdb'"/>
+      <personProfile personId="..." name="vmwork"/>
       <itemVersion role="commands" refId="item with the commands"/>
       <context>
         <session id="session Id"/>
@@ -716,8 +703,8 @@ def toolProcessValgrind(userName, sessions):
     Given the events logged by valgrind, create the following elements
     
     <event type="SessionBegin" datetime="begin time" id="...">
-      <personProfile personId="..." name="vmwork"/>
       <application refId="id pointing to 'valgrind'"/>
+      <personProfile personId="..." name="vmwork"/>
       <itemVersion role="messages" refId="item with the messages"/>
       <context>
         <session id="session Id"/>
@@ -725,8 +712,8 @@ def toolProcessValgrind(userName, sessions):
     </event>
 
     <event type="SessionEnd" datetime="End time" id="...">
-      <personProfile personId="..." name="vmwork"/>
       <application refId="id pointing to 'valgrind'"/>
+      <personProfile personId="..." name="vmwork"/>
       <itemVersion role="commands" refId="item with the messages"/>
       <context>
         <session id="session Id"/>

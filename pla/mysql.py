@@ -30,6 +30,15 @@ dbname = None
 dbconnection = None
 cursorObj = None
 
+select_entity_query = \
+    """
+SELECT * FROM relatedentity WHERE entityId = '%s' AND metadataId = '%s'
+                            AND metadataReference = '%s' AND mimetype = '%s' 
+                            AND name = '%s'
+    """
+insert_entity_query = \
+    """INSERT INTO relatedentity (%s) VALUES (%s)"""
+
 def connect(givenHost = None, givenUser = None, givenPasswd = None, 
             givenDB = None):
     """
@@ -79,6 +88,42 @@ def disconnect():
     dbconnection.close()
     dbconnection = None
     cursorObj = None
+
+def find_or_add_entity(ent_id, md_id = None, md_ref = None, mime_type = None, 
+                       name = None):
+    """
+    First search for an entity and if not found, insert it.
+    """
+
+    global select_entity_query
+    global insert_entity_query
+    global dbconnection
+    global cursorObj
+
+    # Translate Nones to NULLs
+    if ent_id == None:
+        ent_id = 'NULL'
+    if md_id == None:
+        md_id = 'NULL'
+    if md_ref == None:
+        md_ref = 'NULL'
+    if mime_type == None:
+        mime_type = 'NULL'
+    if name == None:
+        name = 'NULL'
+
+    data_pack = (ent_id, md_id, md_ref, mime_type, name)
+    # Execute the select query
+    cursorObj.execute(select_entity_query, data_pack)
+
+    row = cursorObj.fetchone()
+    # If found, forget it
+    if row != None:
+        return
+
+    cursosObj.execute(insert_entity_query, data_pack)
+    
+    return dbconnection.insert_id()
 
 def selectPerson(personID):
     """
