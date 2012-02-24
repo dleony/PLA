@@ -14,7 +14,7 @@ import detect_new_files
 # Modules
 import ldap_lookup, anonymize, event_output, moodle_log
 import apache_log, vm_log, bash_log, firefox_log, kate_log, kdevelop_log
-import gdb_log, gcc_log, valgrind_log
+import gdb_log, gcc_log, valgrind_log, svn_log
 
 #
 # Here are the type of events that are considered and how are they mapped into
@@ -33,6 +33,7 @@ import gdb_log, gcc_log, valgrind_log
 # debugger        | X  |program      |command   |session_cmds (opt)
 # compile         | X  |compiler     |cmd       |Messages (opt)
 # memory_profiler | X  |program      |command   |Messages (opt)
+# svn_commit      | X  |program      |command   |IP | Messages (opt)
 # system (s/e)    | X  |IGNORED      |IGNORED   |IGNORED
 # ----------------+----+-------------+------------------------------------------
 #
@@ -54,7 +55,7 @@ config_defaults = {
 
 modules = ['ldap_lookup', 'anonymize', 'event_output', 'moodle_log', 
            'apache_log', 'vm_log', 'bash_log', 'firefox_log', 'kate_log',
-           'kdevelop_log', 'gdb_log', 'gcc_log', 'valgrind_log']
+           'kdevelop_log', 'gdb_log', 'gcc_log', 'valgrind_log', 'svn_log']
 
 def load_defaults(configuration):
     """
