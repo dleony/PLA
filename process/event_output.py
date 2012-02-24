@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-#
 #
 # Module to dump events in different formats.
-# 
+#
 import sys, locale, codecs, getopt, os, anonymize, mysql, datetime, hashlib
 
 import rule_manager, rules_common
@@ -24,7 +24,8 @@ module_prefix = 'event_output'
 # Configuration parameters for this module
 #
 config_params = {
-    'format': 'CSV',      # Format to dump the output. One of: "CSV", "CAM_DB"
+    'format': 'CSV',      # Format to dump the output.
+                          # One of: "CSV", "CAM_DB", "mongo"
     # These parameters apply only to the CSV format
     'print_ordinal': '',  # Print ordinal as first column in CSV
     'output_file': '',    # File to write in CSV format
@@ -39,7 +40,7 @@ config_params = {
     'exclude_users': ''   # Space separated list of user ids to exclude
 }
 
-event_counter = 0 # Number of events processed 
+event_counter = 0 # Number of events processed
 
 entity_cache = {}
 
@@ -72,7 +73,7 @@ def initialize(module_name):
 
     # Create set of users to exclude
     exclude_users = map(lambda x: anonymize.find_or_encode_string(x),
-                        set(rule_manager.get_property(None, module_prefix, 
+                        set(rule_manager.get_property(None, module_prefix,
                                                       'exclude_users').split()))
 
     # Make sure we initialize the anonymize features common to all methods
@@ -82,6 +83,8 @@ def initialize(module_name):
         init_csv(module_name)
     elif output_format == 'CAM_DB':
         init_cam_db(module_name)
+    elif output_format == 'mongo':
+        init_mongo_db(module_name)
     else:
         init_csv(module_name)
 
@@ -100,7 +103,7 @@ def out(event_list):
     The structure of the list elements is (all are nested lists):
 
     [Event_Name, Datetime, SharingLevel, [List of pairs [Role, Entity]]]
-      
+
     Event_Name: String
     DateTime: datetime
     SharingLevel: String
@@ -149,6 +152,8 @@ def out(event_list):
         out_csv(event_list)
     elif output_format == 'CAM_DB':
         out_cam_db(event_list)
+    elif output_format == 'mongo':
+        out_mongo_db(event_list)
     else:
         out_csv(event_list)
 
@@ -166,6 +171,8 @@ def flush():
         flush_csv(event_list)
     elif output_format == 'CAM_DB':
         flush_cam_db(event_list)
+    elif output_format == 'mongo':
+        flush_mongo_db(event_list)
     else:
         flush_csv(event_list)
 
@@ -188,7 +195,7 @@ def init_csv(module_name):
     if rule_manager.get_property(None, module_name, 'output_file') == '':
         output_file = sys.stdout
     else:
-        output_file = codecs.open(config_params['output_file'], 'w', 
+        output_file = codecs.open(config_params['output_file'], 'w',
                                   encoding = 'utf-8')
 
     # Create the header to print as first line
@@ -209,12 +216,20 @@ def init_cam_db(module_name):
     Initalize the CAM DM process
     """
 
-    mysql.connect(rule_manager.get_property(None, module_name, 'db_host'), 
-                  rule_manager.get_property(None, module_name, 'db_user'), 
-                  rule_manager.get_property(None, module_name, 'db_passwd'), 
+    mysql.connect(rule_manager.get_property(None, module_name, 'db_host'),
+                  rule_manager.get_property(None, module_name, 'db_user'),
+                  rule_manager.get_property(None, module_name, 'db_passwd'),
                   rule_manager.get_property(None, module_name, 'db_name'))
 
     mysql.cursor_obj.execute('select max(datetime) from event')
+
+def init_mongo_db(module_name):
+    """
+    Initialize the mongo db process
+    """
+
+    print 'To be written'
+    sys.exit(1)
 
 ################################################################################
 def out_csv(event_list):
@@ -224,7 +239,7 @@ def out_csv(event_list):
     n,datetime,type,user,application,invocation,[opt1, opt2]
 
     """
-    
+
     global module_prefix
     global event_counter
     global output_file
@@ -258,12 +273,12 @@ def out_csv(event_list):
         event_counter += 1
 
         # Create the event with the first three entities
-        out_line = [unicode(dt), 
-                    '"' + evname.replace('"', '""') + '"', 
-                    '"' + entity_list[0][1][0].replace('"', '""') + '"', 
+        out_line = [unicode(dt),
+                    '"' + evname.replace('"', '""') + '"',
+                    '"' + entity_list[0][1][0].replace('"', '""') + '"',
                     '"' + unicode(entity_list[1][1][0]).replace('"', '""') + '"',
                     '"' + unicode(entity_list[2][1][0]).replace('"', '""') + '"']
-        
+
         # Put the event ordinal as the first column
         if print_ordinal:
             out_line.insert(0, unicode(event_counter))
@@ -313,10 +328,10 @@ def out_cam_db(event_list):
 
             if entity_id == None:
                 # find the entity or add it to the database
-                (entity_id, is_new) = mysql.find_or_add_entity(entity[1][0], 
-                                                               entity[1][1], 
-                                                               entity[1][2], 
-                                                               entity[1][3], 
+                (entity_id, is_new) = mysql.find_or_add_entity(entity[1][0],
+                                                               entity[1][1],
+                                                               entity[1][2],
+                                                               entity[1][3],
                                                                entity[1][4])
                 entity_cache[tuple(entity[1])] = entity_id
 
@@ -333,7 +348,18 @@ def out_cam_db(event_list):
         mysql.insert_eventrelatedentity(data_pack)
 
         event_counter += 1
-        
+
+def out_mongo_db(event_list):
+    """
+    Dump the given data in mongoDB format. See function out
+    """
+
+    global entity_cache
+    global module_prefix
+    global event_counter
+
+    print 'To be written'
+    sys.exit(1)
 
 ################################################################################
 
@@ -343,7 +369,7 @@ def print_event(event):
 
     (Event_Name, Datetime, SharingLevel,
       [ List of pairs (Role, Entity) ])
-      
+
     Event_Name: String
     DateTime: datetime
     SharingLevel: String
@@ -358,7 +384,7 @@ def print_event(event):
     print str(event[0]), str(event[1]), str(event[2])
     for role, entity in event[3]:
         print '  ',
-        print str(role) + ': ' + str(entity[0]), str(entity[1]), str(entity[2]), 
+        print str(role) + ': ' + str(entity[0]), str(entity[1]), str(entity[2]),
         print str(entity[3]), str(entity[4])
 
 
