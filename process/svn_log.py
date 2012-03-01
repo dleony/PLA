@@ -46,6 +46,10 @@ config_params = {
 # Additional global vars to be used
 svn_client = None
 
+# Comments to detect special events to be labeled differently from the rest.
+svn_special_event_comment = [ 'PLA Automatic commit' ]
+svn_special_event_names =   [ 'svn_pla_commit' ]
+
 def initialize(module_name):
     """
     Initialization function. Must be here always.
@@ -82,7 +86,9 @@ def execute(module_name):
 
     global svn_client
     global filter_function
- 
+    global svn_special_event_comment
+    global svn_special_event_names
+
     # Get the level of debug
     debug = int(rule_manager.get_property(None, module_name, 'debug'))
 
@@ -107,7 +113,7 @@ def execute(module_name):
 
     # Dump the dirs being processed
     if debug != 0:
-        print >> sys.stderr, '  Svndirs:', '\n    '.join(source_dirs)
+        print >> sys.stderr, len(source_dirs), 'svndirs being processed.'
 
     # Get the window date to process events
     (from_date, until_date) = rules_common.window_dates(module_name)
@@ -138,6 +144,10 @@ def execute(module_name):
                                        revision_start = revision_start,
                                        revision_end = revision_end))
         
+    # Dump the dirs being processed
+    if debug != 0:
+        print >> sys.stderr, len(all_logs), 'logs being processed.'
+
     # Loop over all the log elements
     total_counter = 0
     mark_lines = len(all_logs) / 40 + 1
@@ -153,7 +163,6 @@ def execute(module_name):
         anon_user_id = anonymize.find_or_encode_string(log_data['author'])
         dtime = datetime.datetime.fromtimestamp(log_data['date'])
 
-        print >> sys.stderr, log_data['message']
         # How can be a substring of a specific length be obtained?
         msg = unicode(log_data['message'], 'utf-8')
         # This subsetting needs to be done after encoding to make sure the
@@ -171,8 +180,14 @@ def execute(module_name):
                                  log_data['date'],
                                  log_data['message']]) == None:
             continue
-        
-        event = ['svn_commit', dtime, None,
+
+        try:
+            special_idx = svn_special_event_comment.index(msg)
+            event_name = svn_special_event_names[special_idx]
+        except ValueError, e:
+            event_name = 'svn_commit'
+
+        event = [event_name, dtime, None,
                  [
                 ['user',        [anon_user_id, None, None, None, None]],
                 ['application', ['svn', None, None, None, None]], 
