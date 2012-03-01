@@ -3,6 +3,7 @@
 #
 # Module to dump events in different formats.
 #
+# Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 import sys, locale, codecs, getopt, os, anonymize, mysql, datetime, hashlib
 
 import rule_manager, rules_common
