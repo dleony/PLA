@@ -33,7 +33,8 @@ import gdb_log, gcc_log, valgrind_log, svn_log
 # debugger        | X  |program      |command   |session_cmds (opt)
 # compile         | X  |compiler     |cmd       |Messages (opt)
 # memory_profiler | X  |program      |command   |Messages (opt)
-# svn_commit      | X  |program      |command   |IP | Messages (opt)
+# svn_commit      | X  |program      |--empty-- |Message (up to 256 chars)
+# svn_pla_commit  | X  |program      |--empty-- |Fixed message
 # system (s/e)    | X  |IGNORED      |IGNORED   |IGNORED
 # ----------------+----+-------------+------------------------------------------
 #
