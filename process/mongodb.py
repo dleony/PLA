@@ -28,9 +28,8 @@ user = None
 passwd = None
 dbname = None
 dbconnection = None
+database = None
 cursor_obj = None
-
-IN THE PROCESS OR REWRITING!!!
 
 select_entity_query = \
     """
@@ -78,26 +77,31 @@ def connect(givenHost = None, givenUser = None, givenPasswd = None,
     global passwd
     global dbname
     global dbconnection
+    global database
     global cursor_obj
     
     # If not enough information is given, bomb out
-    if givenUser == None or givenDB == None:
-        raise ValueError('mysql: Need at least user AND db to connect to db')
+    if givenHost == None or givenDB == None:
+        raise ValueError('mongo: Need at least host and db to connect')
 
     host = givenHost
     user = givenUser
     passwd = givenPasswd
     dbname = givenDB
 
-    dbconnection = MySQLdb.connect(host=givenHost,
-                                   user=givenUser,
-                                   passwd=givenPasswd,
-                                   db=givenDB)
+    connect_URL = host
+    user_str = ''
+    if user != None and user != '':
+        user_str = user
+    if passwd != None and passwd != '':
+        user_str = user_str + ':' + passwd
+    if user_str != '':
+        connect_URL = user_str + '@' + connect_URL
 
-    # Very important, if not, the default seems to be latin1
-    dbconnection.set_character_set('utf8')
+    dbconnection = pymongo.Connection(host=connect_URL)
 
-    cursor_obj = dbconnection.cursor()
+    database = dbconnection[dbname]
+
     return
 
 def disconnect():
@@ -339,11 +343,13 @@ def getHexDigest(item):
     m.update(str(item))
     return m.hexdigest()
 
-# Example
-# execute SQL query using execute() method.
-# cursorobj.execute("SELECT VERSION()")
-# Fetch a single row using fetchone() method.
-# data = cursorobj.fetchone()
-# print "Database version : %s " % data
-# disconnect from server
-# db.close()
+def main():
+    """
+    Function to test how to connect to a mongo db
+    """
+
+    pass
+
+# Execution as script
+if __name__ == "__main__":
+    main()
