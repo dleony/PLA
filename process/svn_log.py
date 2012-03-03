@@ -192,7 +192,7 @@ def execute(module_name):
                  ('datetime', dtime),
                  ('user', anon_user_id),
                  ('application', 'svn'), 
-                 ('invocation', ''), 
+                 ('invocation', log_data['revision']), 
                  ('comment', msg)]
 
         try:
