@@ -9,12 +9,7 @@ import detect_new_files, rules_common, rule_manager, event_output, anonymize
 import process_filters
 
 #
-# Type of events with entities (role, entityId, name)
-#
-# text_editor
-#   - user: userid - NULL
-#   - application: kate - NULL
-#   - invocation: URL - NULL
+# See update_events for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout

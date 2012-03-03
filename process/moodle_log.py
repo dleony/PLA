@@ -9,14 +9,7 @@ import detect_new_files, rule_manager, rules_common, event_output, anonymize
 import process_filters
 
 #
-# Type of events with entities (role, entityId, name)
-#
-# lms_<event name given by moodle>
-#   - user: userid - NULL
-#   - application: moodle - NULL
-#   - invocation: Community ID - NULL
-#   - IP: IP - NULL
-#   - Resource: comment
+# See update_events for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout

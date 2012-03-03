@@ -9,13 +9,8 @@ import fnmatch
 import rules_common, rule_manager, event_output, anonymize, process_filters
 
 #
-# Type of event detected
+# See update_events for the structure of the events
 #
-# svn_commit
-#   - date: date
-#   - user: userid
-#   - application: svn
-#   - comment: max 256 chars with the comment.
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
@@ -35,6 +30,7 @@ module_prefix = 'svn_log'
 #
 config_params = {
     'repository': '',      # Repository to process
+    'repository_name': '', # String to identify the repository
     'files': '',           # Files to process
     'filter_file': '',     # File containing a function to filter events
     'filter_function': '', # Function to use to filter
@@ -72,16 +68,13 @@ def initialize(module_name):
 
 def execute(module_name):
     """
-    Given a list of files with firefox logs, process all of them. 
-
-    Process the files containing the events. Return True if no error is
-    detected.
+    Process the files contained in the given repository.
 
     [('name', 'svn_commit'), 
      ('datetime', dtime),
      ('user', anonymize(user)),
-     ('application', 'svn'),
-     ('invocation', ''),
+     ('program', 'svn'),
+     ('repository', repository name),
      ('comment', (max 256 chars))]
     """
 
@@ -101,6 +94,9 @@ def execute(module_name):
     repository_root = \
         svn_client.info2(repository, 
                          depth = pysvn.depth.empty)[0][1]['repos_root_URL']
+
+    repository_name = rule_manager.get_property(None, module_name, 
+                                                'repository_name')
 
     # Fetch all the files in the given repository
     dir_info = svn_client.list(repository, depth = pysvn.depth.immediates)
@@ -192,7 +188,7 @@ def execute(module_name):
                  ('datetime', dtime),
                  ('user', anon_user_id),
                  ('program', 'svn'), 
-                 ('revision', log_data['revision']), 
+                 ('repository', repository_name), 
                  ('comment', msg)]
 
         try:

@@ -9,14 +9,7 @@ import detect_new_files, rules_common, rule_manager, event_output, anonymize
 import process_filters
 
 #
-# Type of events with entities (role, entityId, name)
-#
-# compiler
-#   - user: userid - NULL
-#   - application: gcc - NULL
-#   - invocation: command - NULL
-#   - session_cmds: session commands - NULL
-#   - session_duration: Session duration hh:mm:ss - NULL
+# See update_events for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout

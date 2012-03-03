@@ -14,10 +14,11 @@ import detect_new_files
 # Modules
 import ldap_lookup, anonymize, event_output, moodle_log
 import apache_log, vm_log, bash_log, firefox_log, kate_log, kdevelop_log
-import gdb_log, gcc_log, valgrind_log, svn_log
+import gdb_log, gcc_log, valgrind_log, svn_log, svn_apache
 
 #
-# Here are the type of events that are considered. Each event has three fixed fields: datetime, name and user. The rest of fields depend on the event.
+# Here are the type of events that are considered. Each event has three fixed
+# fields: name, datetime, and user. The rest of fields depend on the event.
 #
 # ----------------+-------------------------------------------------------------
 # event name      | 
@@ -43,6 +44,9 @@ import gdb_log, gcc_log, valgrind_log, svn_log
 # memory_profiler |(program, valgrind), (command, command), 
 #                 |(messages, Message extract (optional))
 # ----------------+-------------------------------------------------------------
+
+# To REWRITE
+#
 # svn_commit      |(program, svn), (revision, revision), 
 #                 |(comment, Message (up to 256 chars))
 # ----------------+-------------------------------------------------------------
@@ -68,7 +72,8 @@ config_defaults = {
 
 modules = ['ldap_lookup', 'anonymize', 'event_output', 'moodle_log', 
            'apache_log', 'vm_log', 'bash_log', 'firefox_log', 'kate_log',
-           'kdevelop_log', 'gdb_log', 'gcc_log', 'valgrind_log', 'svn_log']
+           'kdevelop_log', 'gdb_log', 'gcc_log', 'valgrind_log', 'svn_log',
+           'svn_apache']
 
 def load_defaults(configuration):
     """

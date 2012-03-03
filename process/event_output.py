@@ -259,16 +259,14 @@ def out_csv(event_list):
         # Create the event with the first three entities and add the rest
         out_line = [unicode(dt),
                     '"' + event[0][1].replace('"', '""') + '"',
-                    '"' + event[2][1].replace('"', '""') + '"',
-                    '"' + event[3][1].replace('"', '""') + '"',
-                    '"' + event[4][1].replace('"', '""') + '"']
+                    '"' + event[2][1].replace('"', '""') + '"']
 
         # Put the event ordinal as the first column
         if print_ordinal:
             out_line.insert(0, unicode(event_counter))
 
         # Attach any remaining entities
-        for entity in event[5:]:
+        for entity in event[3:]:
             field = unicode(entity[1]).replace('"', '""')
             out_line.append(u'"' + field.strip() + u'"')
 
