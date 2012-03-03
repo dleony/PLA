@@ -28,13 +28,13 @@ import gdb_log, gcc_log, valgrind_log, svn_log
 # lms_*           | X  |moodle       |Community |IP | resource
 # visit_url       | X  |browser(opt) |URL       |IP (opt)
 # bashcmd         | X  |program      |command   |
-# text_editor     | X  |program      |command   |
-# ide (s/e)       | X  |program      |command   |
-# debugger        | X  |program      |command   |session_cmds (opt)
-# compile         | X  |compiler     |cmd       |Messages (opt)
-# memory_profiler | X  |program      |command   |Messages (opt)
-# svn_commit      | X  |program      |--empty-- |Message (up to 256 chars)
-# svn_pla_commit  | X  |program      |--empty-- |Fixed message
+# text_editor     | X  |kate         |command   |
+# ide (s/e)       | X  |kdevelop     |command   |
+# debugger        | X  |gdb          |command   |session_cmds (opt)
+# compile         | X  |gcc          |command   |Messages (opt)
+# memory_profiler | X  |valgrind     |command   |Messages (opt)
+# svn_commit      | X  |svn          |revision  |Message (up to 256 chars)
+# svn_pla_commit  | X  |svn          |revision  |Fixed message
 # system (s/e)    | X  |IGNORED      |IGNORED   |IGNORED
 # ----------------+----+-------------+------------------------------------------
 #
