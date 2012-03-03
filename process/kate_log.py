@@ -168,8 +168,8 @@ def execute(module_name):
             event = [('name', 'text_editor'), 
                      ('datetime', dtime),
                      ('user', anon_user_id),
-                     ('application', 'kate'),
-                     ('invocation',  cmd)]
+                     ('program', 'kate'),
+                     ('commmand',  cmd)]
 
             try:
                 event_output.out([event])

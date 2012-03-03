@@ -69,8 +69,8 @@ def execute(module_name):
     [('name', 'bashcmd'), 
      ('datetime', datetime),
      ('user', anonymize(user_id)),
-     ('application', program),
-     ('invocation', command)]
+     ('program', program),
+     ('command', command)]
     
     """
 
@@ -167,8 +167,8 @@ def execute(module_name):
             event = [('name', 'bashcmd'), 
                      ('datetime', stamp),
                      ('user', anon_user_id),
-                     ('application', fields[0]),
-                     ('invocation',  line[:-1])]
+                     ('program', fields[0]),
+                     ('command',  line[:-1])]
 
             try:
                 event_output.out([event])

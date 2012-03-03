@@ -191,8 +191,8 @@ def execute(module_name):
         event = [('name', event_name),
                  ('datetime', dtime),
                  ('user', anon_user_id),
-                 ('application', 'svn'), 
-                 ('invocation', log_data['revision']), 
+                 ('program', 'svn'), 
+                 ('revision', log_data['revision']), 
                  ('comment', msg)]
 
         try:

@@ -181,8 +181,8 @@ q
             event = [('name', 'gcc'), 
                      ('datetime', dtime),
                      ('user', anon_user_id),
-                     ('application', 'gcc'),
-                     ('invocation',  command),
+                     ('program', 'gcc'),
+                     ('command',  command),
                      ('messages',  '"' + '|||'.join(messages) + '"')]
 
             try:

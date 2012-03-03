@@ -166,8 +166,8 @@ def execute(module_name):
             event = [('name', 'ide'),
                      ('datetime', dtime),
                      ('user', anon_user_id),
-                     ('application', 'kdevelop'),
-                     ('invocation', cmd)]
+                     ('program', 'kdevelop'),
+                     ('command', cmd)]
 
             try:
                 event_output.out([event])

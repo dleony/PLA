@@ -81,8 +81,8 @@ def execute(module_name):
      ('datetime', dtime),
      ('user', anonymize(user)),
      ('application', browser?),
-     ('invocation', URL), 
-     ('IP', IP)]
+     ('url', URL), 
+     ('ip', IP)]
             
     """
 
@@ -154,8 +154,8 @@ def execute(module_name):
                      ('datetime', dtime),
                      ('user', anonymize.find_or_encode_string(fields[2])),
                      ('application', 'unknown'), 
-                     ('invocation', url),
-                     ('IP', fields[0])]
+                     ('url', url),
+                     ('ip', fields[0])]
             
             event_output.out([event])
 

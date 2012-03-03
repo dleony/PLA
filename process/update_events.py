@@ -17,26 +17,38 @@ import apache_log, vm_log, bash_log, firefox_log, kate_log, kdevelop_log
 import gdb_log, gcc_log, valgrind_log, svn_log
 
 #
-# Here are the type of events that are considered and how are they mapped into
-# CAM and with which entities.
+# Here are the type of events that are considered. Each event has three fixed fields: datetime, name and user. The rest of fields depend on the event.
 #
 # ----------------+-------------------------------------------------------------
-#     EVENT       |                       ENTITIES
-# ----------------+----+-------------+------------------------------------------
-# event name      |user| application |invocation|other
-# ----------------+----+-------------+------------------------------------------
-# lms_*           | X  |moodle       |Community |IP | resource
-# visit_url       | X  |browser(opt) |URL       |IP (opt)
-# bashcmd         | X  |program      |command   |
-# text_editor     | X  |kate         |command   |
-# ide (s/e)       | X  |kdevelop     |command   |
-# debugger        | X  |gdb          |command   |session_cmds (opt)
-# compile         | X  |gcc          |command   |Messages (opt)
-# memory_profiler | X  |valgrind     |command   |Messages (opt)
-# svn_commit      | X  |svn          |revision  |Message (up to 256 chars)
-# svn_pla_commit  | X  |svn          |revision  |Fixed message
-# system (s/e)    | X  |IGNORED      |IGNORED   |IGNORED
-# ----------------+----+-------------+------------------------------------------
+# event name      | 
+# ----------------+-------------------------------------------------------------
+# lms_*           |(application, moodle), (community, Community), (ip, IP)
+#                 |(resource, resource name)
+# ----------------+-------------------------------------------------------------
+# visit_url       |(application, browser|unknown), (url, URL), (ip, IP) (opt)
+# ----------------+-------------------------------------------------------------
+# bashcmd         |(program, program), (command, command)
+# ----------------+-------------------------------------------------------------
+# text_editor     |(program, kate), (command, command)
+# ----------------+-------------------------------------------------------------
+# ide (s/e)       |(program, kdevelop), (command, command)
+# ----------------+-------------------------------------------------------------
+# debugger        |(program, gdb), (command, command), 
+#                 |(session_cmds, session commands (one per line)),
+#                 |(session_duration, session duration in seconds)
+# ----------------+-------------------------------------------------------------
+# compile         |(program, gcc), (command, command), 
+#                 |(messages, Message extract (optional))
+# ----------------+-------------------------------------------------------------
+# memory_profiler |(program, valgrind), (command, command), 
+#                 |(messages, Message extract (optional))
+# ----------------+-------------------------------------------------------------
+# svn_commit      |(program, svn), (revision, revision), 
+#                 |(comment, Message (up to 256 chars))
+# ----------------+-------------------------------------------------------------
+# svn_pla_commit  |(program, svn), (revision, revision), 
+#                 |(comment, Message (up to 256 chars))
+# ----------------+--------------------------------------------------------
 #
 #
 # Fix the output encoding when redirecting stdout

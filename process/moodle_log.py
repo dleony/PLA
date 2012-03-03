@@ -71,8 +71,8 @@ def execute(module_name):
      ('datetime', datetime),
      ('user', anonymize(user)),
      ('application', 'moodle'),
-     ('invocation', Community ID),
-     ('IP', IP),
+     ('community', Community ID),
+     ('ip', IP),
      ('resource', fields[5])]
             
     """
@@ -150,8 +150,8 @@ def execute(module_name):
                      ('datetime', dtime),
                      ('user', anonymize.find_or_encode_string(fields[3])),
                      ('application', 'moodle'),
-                     ('invocation', fields[0]), 
-                     ('IP', fields[2]),
+                     ('community', fields[0]), 
+                     ('ip', fields[2]),
                      ('resource', fields[5])]
             
             try:

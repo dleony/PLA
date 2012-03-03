@@ -187,8 +187,8 @@ q
             event = [('name', 'valgrind'), 
                      ('datetime', dtime),
                      ('user', anon_user_id),
-                     ('application', 'valgrind'),
-                     ('invocation', command),
+                     ('program', 'valgrind'),
+                     ('commmand', command),
                      ('messages',  '"' + '|||'.join(messages) + '"')]
 
             try:
