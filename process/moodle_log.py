@@ -67,14 +67,13 @@ def execute(module_name):
     Given a list of files with Moodle logs, process all of them. Some lines
     contain spurious 0d in the middle. They are removed.
 
-    ['lms_' + eventtype, datetime, None,
-    [ 
-      [user, [anonymize(user), None, None, None, None]],
-      [application, [moodle, None, None, None, None]],
-      [invocation, [Community ID, None, None, None, None]], 
-      [IP, [IP, None, None, None, None]], 
-      [resource, [fields[5], None, None, None, None]]
-      ]]
+    [('name', 'lms_' + eventtype), 
+     ('datetime', datetime),
+     ('user', anonymize(user)),
+     ('application', 'moodle'),
+     ('invocation', Community ID),
+     ('IP', IP),
+     ('resource', fields[5])]
             
     """
 
@@ -147,16 +146,13 @@ def execute(module_name):
                 new_last_event = dtime
 
             # Create the event data structure
-            event = ['lms_' + fields[4].replace(' ', '_'), \
-                         dtime, None, # Sharing level \
-                         [ \
-                    ['user', [anonymize.find_or_encode_string(fields[3]), 
-                              None, None, None, None]],
-                    ['application', ['moodle', None, None, None, None]], 
-                    ['invocation', [fields[0], None, None, None, None]], 
-                    ['IP', [fields[2], None, None, None, None]],
-                    ['resource', [fields[5], None, None, None, None]]
-                    ]]
+            event = [('name', 'lms_' + fields[4].replace(' ', '_')), \
+                     ('datetime', dtime),
+                     ('user', anonymize.find_or_encode_string(fields[3])),
+                     ('application', 'moodle'),
+                     ('invocation', fields[0]), 
+                     ('IP', fields[2]),
+                     ('resource', fields[5])]
             
             try:
                 event_output.out([event])

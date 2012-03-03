@@ -66,13 +66,11 @@ def execute(module_name):
     """
     Given a list of files with bash logs, process all of them. 
 
-    [bashcmd, datetime, None, 
-      [ 
-        [user, [anonymize(user_id), None, None, None, None]],
-        [application, [program, None, None, None, None]],
-        [invocation, [command, None, None, None, None]]
-      ]
-    ]
+    [('name', 'bashcmd'), 
+     ('datetime', datetime),
+     ('user', anonymize(user_id)),
+     ('application', program),
+     ('invocation', command)]
     
     """
 
@@ -166,13 +164,11 @@ def execute(module_name):
             if stamp > new_last_event:
                 new_last_event = stamp
 
-            event = ['bashcmd', stamp, None,
-                     [
-                    ['user',        [anon_user_id, None, None, None, None]],
-                    ['application', [fields[0], None, None, None, None]], 
-                    ['invocation',  [line[:-1], None, None, None, None]]
-                    ]
-                     ]
+            event = [('name', 'bashcmd'), 
+                     ('datetime', stamp),
+                     ('user', anon_user_id),
+                     ('application', fields[0]),
+                     ('invocation',  line[:-1])]
 
             try:
                 event_output.out([event])

@@ -77,12 +77,11 @@ def execute(module_name):
       - program name
       - file (optional)
 
-    ['text_editor', dtime, None, # Sharing level
-    [
-      ['user', [anonymize(user), None, None, None, None]],
-      [application, ['kate', None, None, None, None]],
-      [invocation, [command (program name + file), None, None, None, None]]
-    ]]
+    [('name', 'text_editor'), 
+     ('datetime', dtime),
+     ('user', anonymize(user)),
+     ('application', 'kate'),
+     ('invocation', command (program name + file))]
 
     """
 
@@ -166,13 +165,11 @@ def execute(module_name):
             if dtime > new_last_event:
                 new_last_event = dtime
 
-            event = ['text_editor', dtime, None,
-                     [
-                    ['user',        [anon_user_id, None, None, None, None]],
-                    ['application', ['kate', None, None, None, None]], 
-                    ['invocation',  [cmd, None, None, None, None]]
-                    ]
-                     ]
+            event = [('name', 'text_editor'), 
+                     ('datetime', dtime),
+                     ('user', anon_user_id),
+                     ('application', 'kate'),
+                     ('invocation',  cmd)]
 
             try:
                 event_output.out([event])

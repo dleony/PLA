@@ -77,12 +77,11 @@ def execute(module_name):
       - program name
       - file (optional)
 
-    ['ide', dtime, None, # Sharing level
-    [
-      ['user', [anonymize(user), None, None, None, None]],
-      [application, ['kdevelop', None, None, None, None]],
-      [invocation, [command, None, None, None, None]]
-    ]]
+    [('name', 'ide'), 
+     ('datetime', dtime),
+     ('user', anonymize(user)),
+     ('application', 'kdevelop'),
+     ('invocation', command)]
 
     """
 
@@ -164,13 +163,11 @@ def execute(module_name):
             if len(fields) == 7:
                 cmd = cmd + ' ' + fields[6][1:-1]
 
-            event = ['ide', dtime, None,
-                     [
-                    ['user',        [anon_user_id, None, None, None, None]],
-                    ['application', ['kdevelop', None, None, None, None]], 
-                    ['invocation',  [cmd, None, None, None, None]]
-                    ]
-                     ]
+            event = [('name', 'ide'),
+                     ('datetime', dtime),
+                     ('user', anon_user_id),
+                     ('application', 'kdevelop'),
+                     ('invocation', cmd)]
 
             try:
                 event_output.out([event])

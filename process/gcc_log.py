@@ -77,13 +77,12 @@ where
 q
 -END
 
-    ['compiler', dtime, None, # Sharing level
-    [
-      ['user', [anonymize(user), None, None, None, None]],
-      [application, ['gcc', None, None, None, None]],
-      [invocation, [command, None, None, None, None]]
-      [messages, [message extract, None, None, None, None]]
-    ]]
+    [('name', 'compiler'), 
+     ('datetime', dtime),
+     ('user', anonymize(user)),
+     ('application', 'gcc'),
+     ('invocation', command),
+     ('messages', message extract)]
 
     """
 
@@ -179,15 +178,12 @@ q
             if dtime > new_last_event:
                 new_last_event = dtime
 
-            event = ['gcc', dtime, None,
-                     [
-                    ['user',        [anon_user_id, None, None, None, None]],
-                    ['application', ['gcc', None, None, None, None]], 
-                    ['invocation',  [command, None, None, None, None]],
-                    ['messages',  ['"' + '|||'.join(messages) + '"',
-                                       None, None, None, None]]
-                    ]
-                     ]
+            event = [('name', 'gcc'), 
+                     ('datetime', dtime),
+                     ('user', anon_user_id),
+                     ('application', 'gcc'),
+                     ('invocation',  command),
+                     ('messages',  '"' + '|||'.join(messages) + '"')]
 
             try:
                 event_output.out([event])

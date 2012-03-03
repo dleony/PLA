@@ -1,7 +1,18 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-#
 #
-# Module to dump events in different formats.
+# Module to dump events in different formats. 
+#
+# The events are received as a list of pairs (key, value) with the following
+# structure
+#
+# [ ('name', <event name>),    # Mandatory!
+#   ('datetime', <date/time>), # Mandatory!
+#   ('user', <user id>),       # Mandatory!
+#   .....                    Additional pairs key,value
+# ]
+#
+#    datetime is a datetime object, the rest strings.
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 import sys, locale, codecs, getopt, os, anonymize, mysql, datetime, hashlib
@@ -26,7 +37,7 @@ module_prefix = 'event_output'
 #
 config_params = {
     'format': 'CSV',      # Format to dump the output.
-                          # One of: "CSV", "CAM_DB", "mongo"
+                          # One of: "CSV", "mongo"
     # These parameters apply only to the CSV format
     'print_ordinal': '',  # Print ordinal as first column in CSV
     'output_file': '',    # File to write in CSV format
@@ -82,8 +93,6 @@ def initialize(module_name):
 
     if output_format == 'CSV':
         init_csv(module_name)
-    elif output_format == 'CAM_DB':
-        init_cam_db(module_name)
     elif output_format == 'mongo':
         init_mongo_db(module_name)
     else:
@@ -101,19 +110,17 @@ def out(event_list):
     Function that receives a list of event elements and dumps them depending on
     the value of the global variable output_format.
 
-    The structure of the list elements is (all are nested lists):
 
-    [Event_Name, Datetime, SharingLevel, [List of pairs [Role, Entity]]]
+    The events are received as a list of pairs (key, value) with the following
+    structure:
 
-    Event_Name: String
-    DateTime: datetime
-    SharingLevel: String
-    Role: String
+    [ ('name', <event name>),    # Mandatory!
+      ('datetime', <date/time>), # Mandatory!
+      ('user', <user id>),       # Mandatory!
+      .....                    Additional pairs key,value
+    ]
 
-    And the entities are:
-    [entityid, metadataid, metadataref, mimetype, name]
-
-    All of them strings.
+    datetime is a datetime object, the rest strings.
     """
 
     global module_prefix
@@ -122,11 +129,9 @@ def out(event_list):
 
     # Check that the event has the minimum amount of info
     incorrect_event = next((x for x in event_list \
-                                if (x[0] == None) or \
-                                (x[0] == '') or \
-                                (x[1] == None) or \
-                                (x[3] == []) or \
-                                (len(x[3]) == 0)), None)
+                                if x[0][0] != 'name' or \
+                                   x[1][0] != 'datetime' or \
+                                   x[2][0] != 'user'), None)
     if incorrect_event:
         print >> sys.stderr, 'Incorrect event detected:'
         print_event(incorrect_event)
@@ -136,23 +141,11 @@ def out(event_list):
     # for event in event_list:
     #     print_event(event)
 
-    # Filter those events that have a user in the exclude_users
-    new_list = []
-    for event in event_list:
-        (ev_name, dt, shl, ent_list) = event
-        user_ent = next((x for x in ent_list if x[0] == 'user'), None)
-        # Ignore if user entity with id in exlclude users
-        if user_ent and (user_ent[1][0] in exclude_users):
-            continue
-        # append event to the filtered list
-        new_list.append(event)
-
-    event_list = new_list
+    # Filter those events that have a user in the exclude_users list
+    event_list = [x for x in event_list if not x[2][1] in exclude_users]
 
     if output_format == 'CSV':
         out_csv(event_list)
-    elif output_format == 'CAM_DB':
-        out_cam_db(event_list)
     elif output_format == 'mongo':
         out_mongo_db(event_list)
     else:
@@ -170,8 +163,6 @@ def flush():
 
     if output_format == 'CSV':
         flush_csv(event_list)
-    elif output_format == 'CAM_DB':
-        flush_cam_db(event_list)
     elif output_format == 'mongo':
         flush_mongo_db(event_list)
     else:
@@ -212,18 +203,6 @@ def init_csv(module_name):
     # Print the first line of the CSV with the column names
     print >> output_file, ','.join(header)
 
-def init_cam_db(module_name):
-    """
-    Initalize the CAM DM process
-    """
-
-    mysql.connect(rule_manager.get_property(None, module_name, 'db_host'),
-                  rule_manager.get_property(None, module_name, 'db_user'),
-                  rule_manager.get_property(None, module_name, 'db_passwd'),
-                  rule_manager.get_property(None, module_name, 'db_name'))
-
-    mysql.cursor_obj.execute('select max(datetime) from event')
-
 def init_mongo_db(module_name):
     """
     Initialize the mongo db process
@@ -256,6 +235,12 @@ def out_csv(event_list):
 
     # Loop over all the events in the list
     for event in event_list:
+
+        if len(event) > 7:
+            print >> sys.stderr, "Event longer than expected."
+            print >> sys.stderr, print_event(event)
+            sys.exit(1)
+
         # Calculate the event hash and see if it exists
         event_hash = hashlib.sha256(unicode(event).encode('utf-8')).hexdigest()
 
@@ -264,91 +249,31 @@ def out_csv(event_list):
             continue
         csv_hash.add(event_hash)
 
-        # Split the event tuple
-        (evname, dt, shl, entity_list) = event
-
+        dt = event[1][1] 
+        # Ignore event because if outside the given window
         if dt < from_date or dt > until_date:
-            # Ignore event because it is outside the given window
             continue
 
         event_counter += 1
 
-        # Create the event with the first three entities
+        # Create the event with the first three entities and add the rest
         out_line = [unicode(dt),
-                    '"' + evname.replace('"', '""') + '"',
-                    '"' + entity_list[0][1][0].replace('"', '""') + '"',
-                    '"' + unicode(entity_list[1][1][0]).replace('"', '""') + '"',
-                    '"' + unicode(entity_list[2][1][0]).replace('"', '""') + '"']
+                    '"' + event[0][1].replace('"', '""') + '"',
+                    '"' + event[2][1].replace('"', '""') + '"',
+                    '"' + event[3][1].replace('"', '""') + '"',
+                    '"' + event[4][1].replace('"', '""') + '"']
 
         # Put the event ordinal as the first column
         if print_ordinal:
             out_line.insert(0, unicode(event_counter))
 
-        # Attach any remaining entity
-        for entity in entity_list[3:]:
-            field = unicode(entity[1][0]).replace('"', '""')
+        # Attach any remaining entities
+        for entity in event[5:]:
+            field = unicode(entity[1]).replace('"', '""')
             out_line.append(u'"' + field.strip() + u'"')
 
         # Dump the line
         print >> output_file, ','.join(out_line)
-
-def out_cam_db(event_list):
-    """
-    Dump the given data in CAM format. See function out
-    """
-
-    global entity_cache
-    global module_prefix
-    global event_counter
-
-    # Get the window date to process events
-    (from_date, until_date) = rules_common.window_dates(module_name)
-
-    # Loop over the list of events
-    for event in event_list:
-        if event[1] < from_date or event[1] > until_date:
-            # Ignore event because it is outside the given window
-            continue
-
-        # Calculate the event hash and see if it exists
-        event_hash = hashlib.sha256(unicode(event).encode('utf-8')).hexdigest()
-
-        if mysql.find_event_by_hash(event_hash) != None:
-            # Event is already in the database, skip
-            continue
-
-        # First find if the entities are already present
-        entities = []
-        entity_list = event[3]
-        new_entity = False
-        for entity in entity_list:
-
-            # Ask the entity cache
-            entity_id = entity_cache.get(tuple(entity[1]))
-            is_new = False
-
-            if entity_id == None:
-                # find the entity or add it to the database
-                (entity_id, is_new) = mysql.find_or_add_entity(entity[1][0],
-                                                               entity[1][1],
-                                                               entity[1][2],
-                                                               entity[1][3],
-                                                               entity[1][4])
-                entity_cache[tuple(entity[1])] = entity_id
-
-            # accumulate pairs (role, entity_id)
-            entities.append((entity[0], entity_id))
-
-            # Detect if any of them is new
-            new_entity |= is_new
-
-        # Insert event and eventrelatedentities
-        event_id = mysql.insert_event(event[0], event[1], event[2], event_hash)
-        data_pack = [(role, event_id, entity_id) \
-                         for (role, entity_id) in entities]
-        mysql.insert_eventrelatedentity(data_pack)
-
-        event_counter += 1
 
 def out_mongo_db(event_list):
     """
@@ -366,28 +291,23 @@ def out_mongo_db(event_list):
 
 def print_event(event):
     """
-    Function to print an event. The structure of the event:
+    Function to print an event. Events are a list of pairs (key, value) with the
+    following structure:
 
-    (Event_Name, Datetime, SharingLevel,
-      [ List of pairs (Role, Entity) ])
+    [ ('name', <event name>),    # Mandatory!
+      ('datetime', <date/time>), # Mandatory!
+      ('user', <user id>),       # Mandatory!
+      .....                    Additional pairs key,value
+    ]
 
-    Event_Name: String
-    DateTime: datetime
-    SharingLevel: String
-    Role: String
-
-    And the entities are:
-    (id, metadataid, metadataref, mimetype, name)
-
-    All of them strings.
+    datetime is a datetime object, the rest strings.
     """
 
-    print str(event[0]), str(event[1]), str(event[2])
-    for role, entity in event[3]:
+    print str(event[1][1]), str(event[0][1]), str(event[2][1])
+    
+    for element in events[3:]:
         print '  ',
-        print str(role) + ': ' + str(entity[0]), str(entity[1]), str(entity[2]),
-        print str(entity[3]), str(entity[4])
-
+        print str(element[0]) + ': ' + str(event[element[1]])
 
 def main():
     """

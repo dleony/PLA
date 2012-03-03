@@ -77,13 +77,12 @@ def execute(module_name):
     """
     Given a list of files with Apache logs, process all of them. 
 
-    ['visit_url', dtime, None, # Sharing level
-    [
-      ['user', [anonymize(user), None, None, None, None]],
-      [application, [browser?, None, None, None, None]],
-      [invocation, [URL, None, None, None, None]], 
-      [IP, [IP, None, None, None, None]], 
-    ]]
+    [('name', 'visit_url'),
+     ('datetime', dtime),
+     ('user', anonymize(user)),
+     ('application', browser?),
+     ('invocation', URL), 
+     ('IP', IP)]
             
     """
 
@@ -151,14 +150,12 @@ def execute(module_name):
 
             (method, url, protocol) = fields[4].split()
 
-            event = ['visit_url', dtime, None, # Sharing level \
-                         [ \
-                    ['user', [anonymize.find_or_encode_string(fields[2]), 
-                              None, None, None, None]],
-                    ['application', ['unknown', None, None, None, None]], 
-                    ['invocation', [url, None, None, None, None]], 
-                    ['IP', [fields[0], None, None, None, None]]
-                    ]]
+            event = [('name', 'visit_url'),
+                     ('datetime', dtime),
+                     ('user', anonymize.find_or_encode_string(fields[2])),
+                     ('application', 'unknown'), 
+                     ('invocation', url),
+                     ('IP', fields[0])]
             
             event_output.out([event])
 

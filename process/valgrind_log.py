@@ -77,13 +77,12 @@ where
 q
 -END
 
-    ['memory_profiler', dtime, None, # Sharing level
-    [
-      ['user', [anonymize(user), None, None, None, None]],
-      [application, ['valgrind', None, None, None, None]],
-      [invocation, [command, None, None, None, None]]
-      [messages, [message extract, None, None, None, None]]
-    ]]
+    [('name', 'memory_profiler'), 
+     ('datetime', dtime),
+     ('user', anonymize(user)),
+     ('application', 'valgrind'),
+     ('invocation', command),
+     ('messages', message extract)]
 
     """
 
@@ -185,15 +184,12 @@ q
             if dtime > new_last_event:
                 new_last_event = dtime
 
-            event = ['valgrind', dtime, None,
-                     [
-                    ['user',        [anon_user_id, None, None, None, None]],
-                    ['application', ['valgrind', None, None, None, None]], 
-                    ['invocation',  [command, None, None, None, None]],
-                    ['messages',  ['"' + '|||'.join(messages) + '"',
-                                       None, None, None, None]]
-                    ]
-                     ]
+            event = [('name', 'valgrind'), 
+                     ('datetime', dtime),
+                     ('user', anon_user_id),
+                     ('application', 'valgrind'),
+                     ('invocation', command),
+                     ('messages',  '"' + '|||'.join(messages) + '"')]
 
             try:
                 event_output.out([event])

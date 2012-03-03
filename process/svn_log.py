@@ -77,11 +77,12 @@ def execute(module_name):
     Process the files containing the events. Return True if no error is
     detected.
 
-    [type: 'svn_commit', 
-     date_time: dtime,
-     user: anonymize(user),
-     application: svn,
-     comment: (max 256 chars)]
+    [('name', 'svn_commit'), 
+     ('datetime', dtime),
+     ('user', anonymize(user)),
+     ('application', 'svn'),
+     ('invocation', ''),
+     ('comment', (max 256 chars))]
     """
 
     global svn_client
@@ -187,13 +188,12 @@ def execute(module_name):
         except ValueError, e:
             event_name = 'svn_commit'
 
-        event = [event_name, dtime, None,
-                 [
-                ['user',        [anon_user_id, None, None, None, None]],
-                ['application', ['svn', None, None, None, None]], 
-                ['comment',     [msg, None, None, None, None]]
-                ]
-                 ]
+        event = [('name', event_name),
+                 ('datetime', dtime),
+                 ('user', anon_user_id),
+                 ('application', 'svn'), 
+                 ('invocation', ''), 
+                 ('comment', msg)]
 
         try:
             event_output.out([event])

@@ -68,12 +68,11 @@ def execute(module_name):
     Process the files containing the events. Return True if no error is
     detected.
 
-    ['visit_url', dtime, None, # Sharing level
-    [
-      ['user', [anonymize(user), None, None, None, None]],
-      [application, [firefox, None, None, None, None]],
-      [invocation, [URL, None, None, None, None]]
-    ]]
+    [('name', 'visit_url'), 
+     ('datetime', dtime),
+     ('user', anonymize(user)),
+     ('application', 'firefox'),
+     ('invocation', URL)]
 
     """
 
@@ -148,13 +147,11 @@ def execute(module_name):
             if dtime > new_last_event:
                 new_last_event = dtime
 
-            event = ['visit_url', dtime, None,
-                     [
-                    ['user',        [anon_user_id, None, None, None, None]],
-                    ['application', ['firefox', None, None, None, None]], 
-                    ['invocation',  [fields[2], None, None, None, None]]
-                    ]
-                     ]
+            event = [('name', 'visit_url'), 
+                     ('datetime', dtime),
+                     ('user', anon_user_id),
+                     ('application', 'firefox'),
+                     ('invocation',  fields[2])]
 
             try:
                 event_output.out([event])

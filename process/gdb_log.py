@@ -76,14 +76,13 @@ where
 q
 -END
 
-    ['debugger', dtime, None, # Sharing level
-    [
-      ['user', [anonymize(user), None, None, None, None]],
-      [application, ['gdb', None, None, None, None]],
-      [invocation, [command, None, None, None, None]]
-      [session_cmds, [session commands, None, None, None, None]]
-      [session_duration, [session_duration, None, None, None, None]]
-    ]]
+    [('name', 'debugger'), 
+     ('datetime', dtime),
+     ('user', anonymize(user)),
+     ('application', 'gdb'),
+     ('invocation, command),
+     ('session_cmds', session commands),
+     ('session_duration', session_duration)]
 
     """
 
@@ -176,16 +175,13 @@ q
             if dtime > new_last_event:
                 new_last_event = dtime
 
-            event = ['gdb', dtime, None,
-                     [
-                    ['user',        [anon_user_id, None, None, None, None]],
-                    ['application', ['gdb', None, None, None, None]], 
-                    ['invocation',  [command, None, None, None, None]],
-                    ['session_cmds',  ['"' + ';'.join(session_cmds) + '"',
-                                       None, None, None, None]],
-                    ['session_duration',  [duration, None, None, None, None]]
-                    ]
-                     ]
+            event = [('name', 'gdb'), 
+                     ('datetime', dtime),
+                     ('user', anon_user_id),
+                     ('application', 'gdb'),
+                     ('invocation', command),
+                     ('session_cmds',  '"' + ';'.join(session_cmds) + '"'),
+                     ('session_duration', duration)]
 
             try:
                 event_output.out([event])
