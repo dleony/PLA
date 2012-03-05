@@ -9,7 +9,7 @@ import detect_new_files, rules_common, rule_manager, event_output, anonymize
 import process_filters
 
 #
-# See update_events for the structure of the events
+# See update_events and event_output for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout
@@ -29,11 +29,9 @@ module_prefix = 'gdb_log'
 # Configuration parameters for this module
 #
 config_params = {
-    'files': '',           # Files to process
-    'filter_file': '',     # File containing a function to filter events
-    'filter_function': '', # Function to use to filter
-    'from_date': '',       # Date from which to process events
-    'until_date': ''       # Date until which to process events
+    'files': '',          # Files to process
+    'filter_file': '',    # File containing a function to filter events
+    'filter_function': '' # Function to use to filter
     }
 
 filter_function = None
@@ -75,7 +73,7 @@ q
      ('application', 'gdb'),
      ('invocation, command),
      ('session_cmds', session commands),
-     ('session_duration', session_duration)]
+     ('session_end', datime when session ended)]
 
     """
 
@@ -132,9 +130,8 @@ q
                 try:
                     dtime = datetime.datetime.strptime(' '.join(fields[1:3]),
                                                            '%Y-%m-%d %H:%M:%S')
-                    duration = datetime.datetime.strptime(' '.join(fields[3:5]),
-                                                          '%Y-%m-%d %H:%M:%S') \
-                                                          - dtime
+                    session_end = datetime.datetime.strptime(' '.join(fields[3:5]),
+                                                             '%Y-%m-%d %H:%M:%S')
                     
                 except ValueError, e:
                     print >> sys.stderr, 'WARNING: In file', filename
@@ -168,16 +165,14 @@ q
             if dtime > new_last_event:
                 new_last_event = dtime
 
-            event = [('name', 'gdb'), 
-                     ('datetime', dtime),
-                     ('user', anon_user_id),
-                     ('program', 'gdb'),
-                     ('command', command),
-                     ('session_cmds',  '"' + ';'.join(session_cmds) + '"'),
-                     ('session_duration', duration)]
+            event = ('gdb', dtime, anon_user_id,
+                     [('program', 'gdb'),
+                      ('command', command),
+                      ('session_cmds',  '"' + ';'.join(session_cmds) + '"'),
+                      ('session_end', session_end)])
 
             try:
-                event_output.out([event])
+                event_output.out(event)
             except Exception, e:
                 print 'Exception while processing', filename, ':', line_number
                 print str(e)

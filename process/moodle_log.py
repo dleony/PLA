@@ -9,7 +9,7 @@ import detect_new_files, rule_manager, rules_common, event_output, anonymize
 import process_filters
 
 #
-# See update_events for the structure of the events
+# See update_events and event_output for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout
@@ -29,11 +29,9 @@ module_prefix = 'moodle_log'
 # Configuration parameters for this module
 #
 config_params = {
-    'files': '',           # Files to process
-    'filter_file': '',     # File containing a function to filter events
-    'filter_function': '', # Function to use to filter
-    'from_date': '',       # Date from which to process events
-    'until_date': ''       # Date until which to process events
+    'files': '',          # Files to process
+    'filter_file': '',    # File containing a function to filter events
+    'filter_function': '' # Function to use to filter
     }
 
 filter_function = None
@@ -76,6 +74,8 @@ def execute(module_name):
     # Get the files to process, lines and mark lines
     (files, total_lines, mark_lines) = \
         rules_common.files_to_process(module_name)
+
+    print >> sys.stderr, 'Processing', len(files), 'files'
 
     # Loop over all the given args
     total_counter = 0
@@ -139,16 +139,13 @@ def execute(module_name):
                 new_last_event = dtime
 
             # Create the event data structure
-            event = [('name', 'lms_' + fields[4].replace(' ', '_')), \
-                     ('datetime', dtime),
-                     ('user', anonymize.find_or_encode_string(fields[3])),
-                     ('application', 'moodle'),
-                     ('community', fields[0]), 
-                     ('ip', fields[2]),
-                     ('resource', fields[5])]
+            event = ('lms_' + fields[4].replace(' ', '_'), dtime, 
+                     anonymize.find_or_encode_string(fields[3]),
+                     [('application', 'moodle'), ('community', fields[0]), 
+                      ('ip', fields[2]), ('resource', fields[5])])
             
             try:
-                event_output.out([event])
+                event_output.out(event)
             except Exception, e:
                 print 'Exception while processing', filename, ':', counter
                 print str(e)

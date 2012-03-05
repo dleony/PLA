@@ -9,7 +9,7 @@ import detect_new_files, rules_common, rule_manager, event_output, anonymize
 import process_filters
 
 #
-# See update_events for the structure of the events
+# See update_events and event_output for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout
@@ -32,8 +32,6 @@ config_params = {
     'files': '',           # Files to process
     'filter_file': '',     # File containing a function to filter events
     'filter_function': '', # Function to use to filter
-    'from_date': '',       # Date from which to process events
-    'until_date': '',      # Date until which to process events
     'message_lines': '10'  # Maximum lines to include in the message
     }
 
@@ -171,15 +169,13 @@ q
             if dtime > new_last_event:
                 new_last_event = dtime
 
-            event = [('name', 'gcc'), 
-                     ('datetime', dtime),
-                     ('user', anon_user_id),
-                     ('program', 'gcc'),
-                     ('command',  command),
-                     ('messages',  '"' + '|||'.join(messages) + '"')]
+            event = ('gcc', dtime, anon_user_id,
+                     [('program', 'gcc'),
+                      ('command',  command),
+                      ('messages',  '"' + '|||'.join(messages) + '"')])
 
             try:
-                event_output.out([event])
+                event_output.out(event)
             except Exception, e:
                 print 'Exception while processing', filename, ':', line_number
                 print str(e)

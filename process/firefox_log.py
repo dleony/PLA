@@ -9,12 +9,7 @@ import detect_new_files, rules_common, rule_manager, event_output, anonymize
 import process_filters
 
 #
-# Type of events with entities (role, entityId, name)
-#
-# visit_url
-#   - user: userid - NULL
-#   - application: firefox - NULL
-#   - invocation: URL - NULL
+# See update_events and event_output for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout
@@ -34,11 +29,9 @@ module_prefix = 'firefox_log'
 # Configuration parameters for this module
 #
 config_params = {
-    'files': '',           # Files to process
-    'filter_file': '',     # File containing a function to filter events
-    'filter_function': '', # Function to use to filter
-    'from_date': '',       # Date from which to process events
-    'until_date': ''       # Date until which to process events
+    'files': '',          # Files to process
+    'filter_file': '',    # File containing a function to filter events
+    'filter_function': '' # Function to use to filter
     }
 
 filter_function = None
@@ -147,14 +140,11 @@ def execute(module_name):
             if dtime > new_last_event:
                 new_last_event = dtime
 
-            event = [('name', 'visit_url'), 
-                     ('datetime', dtime),
-                     ('user', anon_user_id),
-                     ('application', 'firefox'),
-                     ('invocation',  fields[2])]
+            event = ('visit_url', dtime, anon_user_id,
+                     [('application', 'firefox'), ('invocation',  fields[2])])
 
             try:
-                event_output.out([event])
+                event_output.out(event)
             except Exception, e:
                 print 'Exception while processing', filename, ':', line_number
                 print str(e)

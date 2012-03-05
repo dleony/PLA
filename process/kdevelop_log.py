@@ -9,7 +9,7 @@ import detect_new_files, rules_common, rule_manager, event_output, anonymize
 import process_filters
 
 #
-# See update_events for the structure of the events
+# See update_events and event_output for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout
@@ -29,11 +29,9 @@ module_prefix = 'kdevelop_log'
 # Configuration parameters for this module
 #
 config_params = {
-    'files': '',           # Files to process
-    'filter_file': '',     # File containing a function to filter events
-    'filter_function': '', # Function to use to filter
-    'from_date': '',       # Date from which to process events
-    'until_date': ''       # Date until which to process events
+    'files': '',          # Files to process
+    'filter_file': '',    # File containing a function to filter events
+    'filter_function': '' # Function to use to filter
     }
 
 filter_function = None
@@ -158,14 +156,11 @@ def execute(module_name):
             if len(fields) == 7:
                 cmd = cmd + ' ' + fields[6][1:-1]
 
-            event = [('name', 'ide'),
-                     ('datetime', dtime),
-                     ('user', anon_user_id),
-                     ('program', 'kdevelop'),
-                     ('command', cmd)]
+            event = ('ide', dtime, anon_user_id,
+                     [('program', 'kdevelop'), ('command', cmd)])
 
             try:
-                event_output.out([event])
+                event_output.out(event)
             except Exception, e:
                 print 'Exception while processing', filename, ':', line_number
                 print str(e)

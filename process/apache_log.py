@@ -9,7 +9,7 @@ import detect_new_files, rules_common, rule_manager, event_output, anonymize
 import process_filters
 
 #
-# See update_events for the structure of the events
+# See update_events and event_output for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout
@@ -29,11 +29,9 @@ module_prefix = 'apache_log'
 # Configuration parameters for this module
 #
 config_params = {
-    'files': '',           # Files to process
-    'filter_file': '',     # File containing a function to filter events
-    'filter_function': '', # Function to use to filter
-    'from_date': '',       # Date from which to process events
-    'until_date': ''       # Date until which to process events
+    'files': '',          # Files to process
+    'filter_file': '',    # File containing a function to filter events
+    'filter_function': '' # Function to use to filter
     }
 
 # clf_re = re.compile(r'\s+'.join([
@@ -144,14 +142,13 @@ def execute(module_name):
 
             (method, url, protocol) = fields[4].split()
 
-            event = [('name', 'visit_url'),
-                     ('datetime', dtime),
-                     ('user', anonymize.find_or_encode_string(fields[2])),
-                     ('application', 'unknown'), 
-                     ('url', url),
-                     ('ip', fields[0])]
+            event = ('visit_url', dtime,
+                     anonymize.find_or_encode_string(fields[2]),
+                     [('application', 'unknown'), 
+                      ('url', url),
+                      ('ip', fields[0])])
             
-            event_output.out([event])
+            event_output.out(event)
 
         data_in.close()
         detect_new_files.update(None, filename, [new_last_event])

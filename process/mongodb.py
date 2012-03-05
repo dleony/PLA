@@ -21,7 +21,7 @@
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
-import sys, mongodb
+import sys, pymongo, datetime
 
 host = None
 user = None
@@ -31,39 +31,11 @@ dbconnection = None
 database = None
 cursor_obj = None
 
-select_entity_query = \
-    """
-SELECT id FROM relatedentity WHERE 
-       entityId %s
-       AND metadataId %s
-       AND metadataReference %s
-       AND mimetype %s
-       AND name %s
-    """
+event_collection_name = 'events'
+event_collection = None
 
-insert_entity_query = \
-    """INSERT INTO relatedentity (entityId, metadataId, metadataReference,
-                                  mimetype, name) 
-                                 VALUES (%s, %s, %s, %s, %s)"""
-
-select_event_query = \
-    """
-SELECT * FROM event WHERE name = %s AND datetime = %s
-                            AND sharingLevel %s
-    """
-
-select_event_by_hash_query = """SELECT * FROM event WHERE hash = %s"""
-
-insert_event_query = \
-    """INSERT INTO event (datetime, name, sharinglevel, hash) 
-                                 VALUES (%s, %s, %s, %s)"""
-
-insert_eventrelatedentity_query = \
-    """INSERT INTO eventrelatedentity (role, eventid, relatedentityid) 
-                                 VALUES (%s, %s, %s)"""
-
-select_relatedentities_query = \
-    """SELECT role, relatedentityid FROM eventrelatedentity WHERE eventid = %s"""
+user_collection_name = 'users'
+user_collection = None
 
 def connect(givenHost = None, givenUser = None, givenPasswd = None, 
             givenDB = None):
@@ -79,7 +51,11 @@ def connect(givenHost = None, givenUser = None, givenPasswd = None,
     global dbconnection
     global database
     global cursor_obj
-    
+    global event_collection_name
+    global event_collection
+    global user_collection_name
+    global user_collection
+
     # If not enough information is given, bomb out
     if givenHost == None or givenDB == None:
         raise ValueError('mongo: Need at least host and db to connect')
@@ -102,6 +78,13 @@ def connect(givenHost = None, givenUser = None, givenPasswd = None,
 
     database = dbconnection[dbname]
 
+    event_collection = database[event_collection_name]
+    user_collection = database[user_collection_name]
+
+    event_collection.ensure_index([("datetime", pymongo.ASCENDING), 
+                                   ("user", pymongo.ASCENDING)])
+
+    user_collection.ensure_index([("user", pymongo.ASCENDING)], unique = True)
     return
 
 def disconnect():
@@ -115,14 +98,61 @@ def disconnect():
     global dbname
     global dbconnection
     global cursor_obj
+    global event_collection
+    global user_collection
 
     host = None
     user = None
     passwd = None
-    dbconnection.close()
+    dbconnection.disconnect()
     dbconnection = None
     cursor_obj = None
+    event_collection = None
+    user_collection = None
 
+def insert_event(event):
+    """
+    The events are received as tuples with the following structure:
+    
+    (name, datetime, user, [(key1, value1), (key2, value2), ...])
+    
+    datetime is a datetime object, the rest strings.
+    """
+
+    global event_collection
+
+    (event_name, dt, user, other_keys) = event
+
+    user_id = find_or_add_user(user)
+
+    event_data = [('name', event_name), ('datetime', dt), 
+                  ('user', [{'_id': user_id}])]
+    event_data.extend(other_keys)
+
+    return event_collection.insert(dict(event_data))
+
+# 
+# User related function
+#
+def find_or_add_user(user):
+    """
+    Find or insert user
+    """
+
+    global user_collection
+
+    # Find
+    found_obj = user_collection.find_one({'name': user})
+
+    if found_obj != None:
+        return found_obj['_id']
+
+    result = user_collection.insert({'name': user})
+
+    # Add the given user
+    return result
+
+################################################################################
 def find_entity(ent_id, md_id = None, md_ref = None, mime_type = None, 
                 name = None):
     """
@@ -181,48 +211,6 @@ def find_event_by_hash(hash_value):
 
     return cursor_obj.fetchone()
     
-def find_event(event_name, date_time, sharing_level):
-    """
-    Search for an event with the three given fields.
-    """
-
-    global select_event_query
-    global cursor_obj
-
-    # If two of the three parameters are not given, raise exception
-    if event_name == None or date_time == None:
-        raise ValueError('Event with NULL name or datetime in select_event')
-
-    query = select_event_query % ('%s', '%s', 
-                                  ("= %s", "IS %s")[sharing_level is None])
-    
-    data_pack = (event_name, 
-                 date_time.strftime('%Y-%m-%d %H:%M:%S'), sharing_level)
-
-    cursor_obj.execute(query, data_pack)
-
-    return cursor_obj.fetchall()
-
-def insert_event(event_name, date_time, sharing_level, event_hash):
-    """
-    Search for an event with the three given fields.
-    """
-
-    global insert_event_query
-    global dbconnection
-    global cursor_obj
-
-    # If two of the three parameters are not given, raise exception
-    if event_name == None or date_time == None:
-        raise ValueError('Event with NULL name or datetime in insert_event')
-
-    data_pack = (date_time.strftime('%Y-%m-%d %H:%M:%S'), event_name, 
-                 sharing_level, event_hash)
-
-    cursor_obj.execute(insert_event_query, data_pack)
-
-    return dbconnection.insert_id()
-
 def find_eventrelatedentity(event_id):
     """
     Given a event_id, get the related entities.
@@ -348,7 +336,21 @@ def main():
     Function to test how to connect to a mongo db
     """
 
-    pass
+    # Connect to the db
+    connect(givenHost = '127.0.0.1', givenDB = 'as_2011')
+
+    ev1 = [('name', 'name1'), 
+           ('datetime', datetime.datetime(2012, 2, 29, 12, 12)),
+           ('user', [{'id1': 'user1', 'apt1': 'v1', 'apt2': 'v2'}, {'id2': 'user2'}])]
+
+    event_id = insert_event(ev1)
+    
+    print 'Inserted', event_id
+
+    print find_event(ev1)
+
+    # Disconnect to the db
+    disconnect()
 
 # Execution as script
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ import fnmatch
 import rules_common, rule_manager, event_output, anonymize, process_filters
 
 #
-# See update_events for the structure of the events
+# See update_events and event_output for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout
@@ -34,8 +34,6 @@ config_params = {
     'files': '',           # Files to process
     'filter_file': '',     # File containing a function to filter events
     'filter_function': '', # Function to use to filter
-    'from_date': '',       # Date from which to process events
-    'until_date': '',      # Date until which to process events
     'msg_length': '256'    # Maximum message size stored
     }
 
@@ -110,7 +108,8 @@ def execute(module_name):
 
     # Dump the dirs being processed
     if debug != 0:
-        print >> sys.stderr, len(source_dirs), 'svndirs being processed.'
+        print >> sys.stderr, repository_root, ':', len(source_dirs), 
+        print >> sys.stderr, 'svndirs being processed.'
 
     # Get the window date to process events
     (from_date, until_date) = rules_common.window_dates(module_name)
@@ -184,15 +183,13 @@ def execute(module_name):
         except ValueError, e:
             event_name = 'svn_commit'
 
-        event = [('name', event_name),
-                 ('datetime', dtime),
-                 ('user', anon_user_id),
-                 ('program', 'svn'), 
-                 ('repository', repository_name), 
-                 ('comment', msg)]
+        event = (event_name, dtime, anon_user_id,
+                 [('program', 'svn'), 
+                  ('repository', repository_name), 
+                  ('comment', msg)])
 
         try:
-            event_output.out([event])
+            event_output.out(event)
         except Exception, e:
             print 'Exception while processing', module_name
             print str(e)

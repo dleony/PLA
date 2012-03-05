@@ -9,12 +9,7 @@ import detect_new_files, rules_common, rule_manager, event_output, anonymize
 import process_filters
 
 #
-# Type of events with entities (role, entityId, name)
-#
-# bashcmd
-#   - user: userid - NULL
-#   - application: program - NULL
-#   - invocation: command - NULL
+# See update_events and event_output for the structure of the events
 #
 
 # Fix the output encoding when redirecting stdout
@@ -34,11 +29,9 @@ module_prefix = 'bash_log'
 # Configuration parameters for this module
 #
 config_params = {
-    'files': '',           # Files to process
-    'filter_file': '',     # File containing a function to filter events
-    'filter_function': '', # Function to use to filter
-    'from_date': '',       # Date from which to process events
-    'until_date': ''       # Date until which to process events
+    'files': '',          # Files to process
+    'filter_file': '',    # File containing a function to filter events
+    'filter_function': '' # Function to use to filter
     }
 
 
@@ -164,14 +157,11 @@ def execute(module_name):
             if stamp > new_last_event:
                 new_last_event = stamp
 
-            event = [('name', 'bashcmd'), 
-                     ('datetime', stamp),
-                     ('user', anon_user_id),
-                     ('program', fields[0]),
-                     ('command',  line[:-1])]
+                event = ('bashcmd', stamp, anon_user_id, 
+                         [('program', fields[0]), ('command',  line[:-1])])
 
             try:
-                event_output.out([event])
+                event_output.out(event)
             except Exception, e:
                 print 'Exception while processing', filename, ':', line_number
                 print str(e)

@@ -3,21 +3,16 @@
 #
 # Module to dump events in different formats. 
 #
-# The events are received as a list of pairs (key, value) with the following
-# structure
+# The events are received as tuples with the following structure:
 #
-# [ ('name', <event name>),    # Mandatory!
-#   ('datetime', <date/time>), # Mandatory!
-#   ('user', <user id>),       # Mandatory!
-#   .....                    Additional pairs key,value
-# ]
+# (name, datetime, user, [(key1, value1), (key2, value2), ...])
 #
 #    datetime is a datetime object, the rest strings.
 #
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 import sys, locale, codecs, getopt, os, anonymize, mysql, datetime, hashlib
 
-import rule_manager, rules_common
+import rule_manager, rules_common, mongodb
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
@@ -47,14 +42,10 @@ config_params = {
     'db_passwd': '',
     'db_name': '',
     # These parameters apply to any format
-    'from_date': '',      # Date from which to process events
-    'until_date': '',     # Date until which to process events
     'exclude_users': ''   # Space separated list of user ids to exclude
 }
 
 event_counter = 0 # Number of events processed
-
-entity_cache = {}
 
 output_file = None
 
@@ -105,51 +96,38 @@ def execute(module_name):
     """
     return
 
-def out(event_list):
+def out(event):
     """
-    Function that receives a list of event elements and dumps them depending on
-    the value of the global variable output_format.
+    Function that receives an event and dumps it depending on the value of the
+    global variable output_format.
 
 
-    The events are received as a list of pairs (key, value) with the following
-    structure:
-
-    [ ('name', <event name>),    # Mandatory!
-      ('datetime', <date/time>), # Mandatory!
-      ('user', <user id>),       # Mandatory!
-      .....                    Additional pairs key,value
-    ]
-
+    The event is received as a tuple with the following structure:
+    
+    (name, datetime, user, [(key1, value1), (key2, value2), ...]
+    
     datetime is a datetime object, the rest strings.
+
     """
 
     global module_prefix
     global output_format
     global exclude_users
 
-    # Check that the event has the minimum amount of info
-    incorrect_event = next((x for x in event_list \
-                                if x[0][0] != 'name' or \
-                                   x[1][0] != 'datetime' or \
-                                   x[2][0] != 'user'), None)
-    if incorrect_event:
-        print >> sys.stderr, 'Incorrect event detected:'
-        print_event(incorrect_event)
-        sys.exit(1)
-
     # Loop over all the events and print them
     # for event in event_list:
     #     print_event(event)
 
     # Filter those events that have a user in the exclude_users list
-    event_list = [x for x in event_list if not x[2][1] in exclude_users]
+    if event[2] in exclude_users:
+        return
 
     if output_format == 'CSV':
-        out_csv(event_list)
+        out_csv(event)
     elif output_format == 'mongo':
-        out_mongo_db(event_list)
+        out_mongo_db(event)
     else:
-        out_csv(event_list)
+        out_csv(event)
 
 def flush():
     """
@@ -208,11 +186,14 @@ def init_mongo_db(module_name):
     Initialize the mongo db process
     """
 
-    print 'To be written'
-    sys.exit(1)
+    mongodb.connect(rule_manager.get_property(None, module_name, 'db_host'),
+                    rule_manager.get_property(None, module_name, 'db_user'),
+                    rule_manager.get_property(None, module_name, 'db_passwd'),
+                    rule_manager.get_property(None, module_name, 'db_name'))
+
 
 ################################################################################
-def out_csv(event_list):
+def out_csv(event):
     """
     Dump the given data in CSV format. See function out
 
@@ -233,57 +214,52 @@ def out_csv(event_list):
     # Get the window date to process events
     (from_date, until_date) = rules_common.window_dates(module_prefix)
 
-    # Loop over all the events in the list
-    for event in event_list:
+    # Chop event into pieces
+    (event_name, dt, user, other_keys) = event
 
-        if len(event) > 7:
-            print >> sys.stderr, "Event longer than expected."
-            print >> sys.stderr, print_event(event)
-            sys.exit(1)
+    if len(other_keys) > 4:
+        print >> sys.stderr, "Event longer than expected."
+        print >> sys.stderr, print_event(event)
+        sys.exit(1)
 
-        # Calculate the event hash and see if it exists
-        event_hash = hashlib.sha256(unicode(event).encode('utf-8')).hexdigest()
+    # Calculate the event hash and see if it exists
+    event_hash = hashlib.sha256(unicode(event).encode('utf-8')).hexdigest()
 
-        if event_hash in csv_hash:
-            # Event is already in the database, skip
-            continue
-        csv_hash.add(event_hash)
+    if event_hash in csv_hash:
+        # Event is already in the database, skip
+        return
+    csv_hash.add(event_hash)
 
-        dt = event[1][1] 
-        # Ignore event because if outside the given window
-        if dt < from_date or dt > until_date:
-            continue
+    # Ignore event because if outside the given window
+    if dt < from_date or dt > until_date:
+        return
 
-        event_counter += 1
+    event_counter += 1
 
-        # Create the event with the first three entities and add the rest
-        out_line = [unicode(dt),
-                    '"' + event[0][1].replace('"', '""') + '"',
-                    '"' + event[2][1].replace('"', '""') + '"']
+    # Create the event with the first three entities and add the rest
+    out_line = [unicode(dt), '"' + event_name + '"', '"' + user + '"']
 
-        # Put the event ordinal as the first column
-        if print_ordinal:
-            out_line.insert(0, unicode(event_counter))
+    # Put the event ordinal as the first column
+    if print_ordinal:
+        out_line.insert(0, unicode(event_counter))
 
-        # Attach any remaining entities
-        for entity in event[3:]:
-            field = unicode(entity[1]).replace('"', '""')
-            out_line.append(u'"' + field.strip() + u'"')
+    # Attach any remaining entities
+    for entity in other_keys:
+        field = unicode(entity[1]).replace('"', '""')
+        out_line.append(u'"' + field.strip() + u'"')
 
-        # Dump the line
-        print >> output_file, ','.join(out_line)
+    # Dump the line
+    print >> output_file, ','.join(out_line)
 
-def out_mongo_db(event_list):
+def out_mongo_db(event):
     """
-    Dump the given data in mongoDB format. See function out
+    Save the given event in a mongoDB.
     """
 
-    global entity_cache
     global module_prefix
     global event_counter
 
-    print 'To be written'
-    sys.exit(1)
+    mongodb.insert_event(event)
 
 ################################################################################
 
@@ -292,18 +268,15 @@ def print_event(event):
     Function to print an event. Events are a list of pairs (key, value) with the
     following structure:
 
-    [ ('name', <event name>),    # Mandatory!
-      ('datetime', <date/time>), # Mandatory!
-      ('user', <user id>),       # Mandatory!
-      .....                    Additional pairs key,value
-    ]
+    (name, datetime, user, [(key1, value1), (key2, value2), ...])
 
     datetime is a datetime object, the rest strings.
+
     """
 
-    print str(event[1][1]), str(event[0][1]), str(event[2][1])
+    print str(event[1]), str(event[0]), str(event[2])
     
-    for element in events[3:]:
+    for element in events[3]:
         print '  ',
         print str(element[0]) + ': ' + str(event[element[1]])
 

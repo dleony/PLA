@@ -6,7 +6,7 @@
 import os, sys, tarfile, getopt, pysvn, re, fnmatch, codecs, locale, shutil
 import datetime, glob
 
-import rule_manager, event_output, anonymize, process_filters
+import rule_manager, anonymize, process_filters
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
