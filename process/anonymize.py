@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-#
 #
 # Script to compute tf-idf for a set of documents
-# 
+#
 import sys, locale, codecs, getopt, os, hashlib, getpass, atexit
 import rule_manager, ldap_lookup
 
@@ -65,7 +65,7 @@ def initialize(module_name = None):
     # Get values from config
     map_file = rule_manager.get_property(None, module_name, 'file')
     passwd = rule_manager.get_property(None, module_name, 'passwd')
-    min_length = int(rule_manager.get_property(None, module_name, 
+    min_length = int(rule_manager.get_property(None, module_name,
                                                'min_length'))
 
     # Load the content in the dictionary
@@ -146,14 +146,14 @@ def find_or_encode_string(value, synonyms = None):
     # Remove leading and trailing whitespace
     value = value.strip()
 
-    # See if any of the IDs is in the 
+    # See if any of the IDs is in the
     digest = find_string(value)
     if digest != None:
         # Hit, return
         return digest
 
     passwd = rule_manager.get_property(None, module_prefix, 'passwd')
-    min_length = int(rule_manager.get_property(None, module_prefix, 
+    min_length = int(rule_manager.get_property(None, module_prefix,
                                                'min_length'))
 
     # String not present. Encode, store and return
@@ -169,7 +169,7 @@ def find_or_encode_string(value, synonyms = None):
     other_ids = set([value])
     ldap_dict = ldap_lookup.get(value)
     if ldap_dict != None:
-        other_ids = other_ids.union(set(map(lambda x: x[0].decode('utf-8'), 
+        other_ids = other_ids.union(set(map(lambda x: x[0].decode('utf-8'),
                                             ldap_dict.values())))
 
     if synonyms != None:
@@ -194,7 +194,7 @@ def main():
     """
     Get a list of NIAs and create an encrypted mapping. The idea is to create a
     procedure that is difficult to reverse, and keep it as secret as possible.
-    
+
     Procedure:
 
     Take the NIA, concatenate it with a password, apply sha256 and take the
@@ -203,8 +203,8 @@ def main():
 
     The NIAs are assumed to be the first field of a CSV line give by stdin. Dump
     the mapping to stdout in CSV format.
-    
-    script [options] 
+
+    script [options]
 
     Options:
 
@@ -286,11 +286,11 @@ def main():
         # Skip empty lines
         if len(line) == 0:
             continue
-        
+
         fields = line.split(',')
         nia = fields[0]
         find_or_encode_string(nia, fields[1:])
-    
+
     if len(anonymize_map) == 0:
         print >> sys.stderr, 'No data to anonymize'
         sys.exit(1)
@@ -305,15 +305,15 @@ def main():
 
     #     for nia, hash_digest in anonymize_map.items():
     #         shortanonymize_map.add(hash_digest[:length])
-            
+
     # result = {}
     # for nia, hash_digest in anonymize_map.items():
     #     result[nia] = (hash_digest, hash_digest[:length])
 
     # for nia, item in sorted(anonymize_map.items()):
     #     print nia + ',' + item
-        
-    
+
+
     # update_map_file(map_file)
 
 # Execution as script

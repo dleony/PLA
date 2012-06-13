@@ -126,7 +126,7 @@ def execute(module_name):
             # the line
             if len(fields) < 6:
                 print >> sys.stderr, 'WARNING: In file', filename
-                print >> sys.stderr, 'Ignoring:', line
+                print >> sys.stderr, 'Not enough fields:', line
                 continue
 
             try:
@@ -134,7 +134,7 @@ def execute(module_name):
                                                    '%Y-%m-%d %H:%M:%S')
             except ValueError, e:
                 print >> sys.stderr, 'WARNING: In file', filename
-                print >> sys.stderr, 'Ignoring:', line
+                print >> sys.stderr, 'Incorrect fields:', line
                 continue
             
             if dtime <= last_event:
@@ -159,7 +159,7 @@ def execute(module_name):
                 new_last_event = dtime
 
             event = ('text_editor', dtime, anon_user_id,
-                     [('program', 'kate'), ('commmand',  cmd)])
+                     [('program', 'kate'), ('command',  cmd)])
 
             try:
                 event_output.out(event)
@@ -169,6 +169,7 @@ def execute(module_name):
                 sys.exit(1)
             
         data_in.close()
-        detect_new_files.update(None, filename, [new_last_event])
+        detect_new_files.update(None, module_name + '//' + filename, 
+                                [new_last_event])
 
     print >> sys.stderr

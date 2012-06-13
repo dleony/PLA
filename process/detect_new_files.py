@@ -143,7 +143,7 @@ def needs_processing(data, file_name):
         return (None,)
 
     # File exists, but it was not modified, no need to process anything
-    if (os.path.getmtime(file_name) - fdata[0]) <= minimum_difference:
+    if (os.path.getmtime(file_name.split('//')[1]) - fdata[0]) <= minimum_difference:
         return None
 
     # If file_data not present, or file exists but older, it was modified.
@@ -168,7 +168,7 @@ def update(data, file_name, other_data = None):
         other_data = []
 
     # Update the mtime
-    other_data.insert(0, os.path.getmtime(file_name))
+    other_data.insert(0, os.path.getmtime(file_name.split('//')[1]))
     data[file_name] = tuple(other_data)
 
     return

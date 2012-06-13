@@ -33,15 +33,15 @@ def filter_apache(fields):
     """
     
     # Authentication failure are not processed
-    if fields[5] != '200' and fields[5] != '404':
+    if fields[5] != '200': # and fields[5] != '404':
         return None
 
     # Process only URLs that terminate in .html
     url = fields[4].split()[1]
 
     # 404 that don't have the _bogus.html substring are also rejected
-    if fields[5] == '404' and url.find('.html_bogus.html') == -1:
-        return None
+    # if fields[5] == '404' and url.find('.html_bogus.html') == -1:
+    #     return None
 
     # Hit on an HTML page 
     if (url.endswith('.html')) or (url == '/') or (url.find('.html?') != -1):

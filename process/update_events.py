@@ -14,7 +14,7 @@ import detect_new_files
 # Modules
 import ldap_lookup, anonymize, event_output, moodle_log
 import apache_log, vm_log, bash_log, firefox_log, kate_log, kdevelop_log
-import gdb_log, gcc_log, valgrind_log, svn_log, svn_apache
+import gdb_log, gcc_log, valgrind_log, svn_log, svn_apache, embeddedq_log
 
 #
 # Here are the type of events that are considered. Each event has three fixed
@@ -44,6 +44,9 @@ import gdb_log, gcc_log, valgrind_log, svn_log, svn_apache
 # memory_profiler |(program, valgrind), (command, command), 
 #                 |(messages, Message extract (optional))
 # ----------------+-------------------------------------------------------------
+# embedded_???    |
+#                 |
+# ----------------+-------------------------------------------------------------
 
 # To REWRITE
 #
@@ -53,6 +56,8 @@ import gdb_log, gcc_log, valgrind_log, svn_log, svn_apache
 # svn_pla_commit  |(program, svn), (revision, revision), 
 #                 |(comment, Message (up to 256 chars))
 # ----------------+--------------------------------------------------------
+#
+# How about SVN events taken from Apache? Include!!!
 #
 #
 # Fix the output encoding when redirecting stdout
@@ -73,7 +78,7 @@ config_defaults = {
 modules = ['ldap_lookup', 'anonymize', 'event_output', 'moodle_log', 
            'apache_log', 'vm_log', 'bash_log', 'firefox_log', 'kate_log',
            'kdevelop_log', 'gdb_log', 'gcc_log', 'valgrind_log', 'svn_log',
-           'svn_apache']
+           'svn_apache', 'embeddedq_log']
 
 def load_defaults(configuration):
     """

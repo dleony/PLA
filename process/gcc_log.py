@@ -182,6 +182,7 @@ q
                 sys.exit(1)
             
         data_in.close()
-        detect_new_files.update(None, filename, [new_last_event])
+        detect_new_files.update(None, module_name + '//' + filename,
+                                [new_last_event])
 
     print >> sys.stderr

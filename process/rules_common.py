@@ -71,7 +71,9 @@ def files_to_process(module_name):
     if file_modification_cache != '':
         new_files = []
         for x in files:
-            file_annotation = detect_new_files.needs_processing(None, x)
+            file_annotation = detect_new_files.needs_processing(None, 
+                                                                module_name + 
+                                                                '//' + x)
             if file_annotation == None:
                 print >> sys.stderr, 'File', x, 'not modified. Skipping'
             else:

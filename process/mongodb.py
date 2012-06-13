@@ -81,10 +81,10 @@ def connect(givenHost = None, givenUser = None, givenPasswd = None,
     event_collection = database[event_collection_name]
     user_collection = database[user_collection_name]
 
-    event_collection.ensure_index([("datetime", pymongo.ASCENDING), 
-                                   ("user", pymongo.ASCENDING)])
+    # event_collection.ensure_index([("datetime", pymongo.ASCENDING), 
+    #                                ("user", pymongo.ASCENDING)])
 
-    user_collection.ensure_index([("user", pymongo.ASCENDING)], unique = True)
+    user_collection.ensure_index([("name", pymongo.ASCENDING)], unique = True)
     return
 
 def disconnect():
@@ -127,9 +127,9 @@ def insert_event(event):
 
     event_data = [('name', event_name), ('datetime', dt), 
                   ('user', [{'_id': user_id}])]
-    event_data.extend(other_keys)
 
-    return event_collection.insert(dict(event_data))
+    event_data.extend(other_keys)
+    return event_collection.insert(dict(event_data), safe = True)
 
 # 
 # User related function
@@ -139,18 +139,43 @@ def find_or_add_user(user):
     Find or insert user
     """
 
+    global dbconnection
     global user_collection
 
     # Find
-    found_obj = user_collection.find_one({'name': user})
+    found_obj = find_user(user)
 
     if found_obj != None:
         return found_obj['_id']
 
-    result = user_collection.insert({'name': user})
-
     # Add the given user
-    return result
+    return user_collection.insert({'name': user}, safe = True)
+
+def find_user(user):
+    """
+    Find a user
+    """
+
+    global user_collection
+
+    return user_collection.find_one({'name': user})
+
+def update_user(user, pairs):
+    """
+    Given a user and a dictionary with pairs key, value, update the values in
+    the given user. If the user parameter is simply an string, then it is turned
+    into a spec with 'name' equal to that value. If user is a dictionary, it is
+    directly passed to the update operation.
+    """
+    
+    global user_collection
+
+    if type(user) != dict:
+        user = {'name': user}
+
+    return user_collection.update(user, {"$set": pairs}, upsert = False, 
+                                  safe = True)
+
 
 ################################################################################
 def find_entity(ent_id, md_id = None, md_ref = None, mime_type = None, 
@@ -328,7 +353,7 @@ def getHexDigest(item):
     Given an item, create an hex digest
     """
     m = hashlib.sha1()
-    m.update(str(item))
+    m.update(str(item), safe = True)
     return m.hexdigest()
 
 def main():
