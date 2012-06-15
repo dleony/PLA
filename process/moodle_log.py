@@ -77,7 +77,7 @@ def execute(module_name):
         rules_common.files_to_process(module_name)
 
     datetime_fmt = rule_manager.get_property(None, module_name, 
-                                             'datetime_format'))
+                                             'datetime_format')
 
     print >> sys.stderr, 'Processing', len(files), 'files'
 
@@ -122,8 +122,7 @@ def execute(module_name):
                 continue
 
             # Translate date time of the event
-            dtime = datetime.datetime.strptime(fields[1].strip(), 
-                                               '%d %B %Y, %H:%M %p')
+            dtime = datetime.datetime.strptime(fields[1].strip(), datetime_fmt)
 
             if dtime <= last_event:
                 # Event is older than what has been recorded in the
