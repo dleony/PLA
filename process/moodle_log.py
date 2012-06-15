@@ -32,7 +32,7 @@ config_params = {
     'files': '',                            # Files to process
     'filter_file': '',                      # File containing a function to filter events
     'filter_function': '',                  # Function to use to filter
-    'datetime_format': '%d %B %Y, %H:%M %p' # Format to parse the date in Moodle log files
+    'datetime_format': '%%d %%B %%Y, %%H:%%M %%p' # Format to parse the date in Moodle log files
     }
 
 filter_function = None
@@ -122,7 +122,12 @@ def execute(module_name):
                 continue
 
             # Translate date time of the event
-            dtime = datetime.datetime.strptime(fields[1].strip(), datetime_fmt)
+            try:
+                dtime = datetime.datetime.strptime(fields[1].strip(), 
+                                                   datetime_fmt)
+            except ValueError, v:
+                print >> sys.stderr, 'Skipping', line
+                continue
 
             if dtime <= last_event:
                 # Event is older than what has been recorded in the
