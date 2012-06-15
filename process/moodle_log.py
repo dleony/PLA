@@ -29,9 +29,10 @@ module_prefix = 'moodle_log'
 # Configuration parameters for this module
 #
 config_params = {
-    'files': '',          # Files to process
-    'filter_file': '',    # File containing a function to filter events
-    'filter_function': '' # Function to use to filter
+    'files': '',                            # Files to process
+    'filter_file': '',                      # File containing a function to filter events
+    'filter_function': '',                  # Function to use to filter
+    'datetime_format': '%d %B %Y, %H:%M %p' # Format to parse the date in Moodle log files
     }
 
 filter_function = None
@@ -74,6 +75,9 @@ def execute(module_name):
     # Get the files to process, lines and mark lines
     (files, total_lines, mark_lines) = \
         rules_common.files_to_process(module_name)
+
+    datetime_fmt = rule_manager.get_property(None, module_name, 
+                                             'datetime_format'))
 
     print >> sys.stderr, 'Processing', len(files), 'files'
 
