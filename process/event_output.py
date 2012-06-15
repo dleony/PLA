@@ -57,7 +57,7 @@ print_ordinal = False
 
 exclude_users = set([])
 
-csv_hash = set([])
+# csv_hash = set([])
 
 def initialize(module_name):
     """
@@ -155,11 +155,11 @@ def init_csv(module_name):
 
     global config_parmas
     global output_file
-    global csv_hash
+    # global csv_hash
     global print_ordinal
 
     # Reset the set of hashes
-    csv_hash = set([])
+    # csv_hash = set([])
 
     # Set the output_file
     if rule_manager.get_property(None, module_name, 'output_file') == '':
@@ -204,7 +204,7 @@ def out_csv(event):
     global module_prefix
     global event_counter
     global output_file
-    global csv_hash
+    # global csv_hash
     global print_ordinal
 
     # Get some global variables
@@ -223,12 +223,12 @@ def out_csv(event):
         sys.exit(1)
 
     # Calculate the event hash and see if it exists
-    event_hash = hashlib.sha256(unicode(event).encode('utf-8')).hexdigest()
+    # event_hash = hashlib.sha256(unicode(event).encode('utf-8')).hexdigest()
 
-    if event_hash in csv_hash:
-        # Event is already in the database, skip
-        return
-    csv_hash.add(event_hash)
+    # if event_hash in csv_hash:
+    #     # Event is already in the database, skip
+    #     return
+    # csv_hash.add(event_hash)
 
     # Ignore event because if outside the given window
     if dt < from_date or dt > until_date:
