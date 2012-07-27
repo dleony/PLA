@@ -42,7 +42,7 @@ config_params = {
     'db_passwd': '',
     'db_name': '',
     # These parameters apply to any format
-    'exclude_users': ''   # Space separated list of user ids to exclude
+    'exclude_users': ''   # Comma separated list of user ids to exclude
 }
 
 event_counter = 0 # Number of events processed
@@ -77,7 +77,7 @@ def initialize(module_name):
     # Create set of users to exclude
     exclude_users = map(lambda x: anonymize.find_or_encode_string(x),
                         set(rule_manager.get_property(None, module_prefix,
-                                                      'exclude_users').split()))
+                                                      'exclude_users').split(',')))
 
     # Make sure we initialize the anonymize features common to all methods
     anonymize.initialize()

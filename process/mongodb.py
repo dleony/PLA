@@ -366,7 +366,8 @@ def main():
 
     ev1 = [('name', 'name1'), 
            ('datetime', datetime.datetime(2012, 2, 29, 12, 12)),
-           ('user', [{'id1': 'user1', 'apt1': 'v1', 'apt2': 'v2'}, {'id2': 'user2'}])]
+           ('user', [{'id1': 'user1', 'apt1': 'v1', 'apt2': 'v2'}, 
+                     {'id2': 'user2'}])]
 
     event_id = insert_event(ev1)
     

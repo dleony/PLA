@@ -36,7 +36,7 @@ config_params = {
     'passwd': '' # Password used to anonymize
     }
 
-anonymize_map = {}
+anonymize_map = None
 
 debug = 0
 
@@ -78,24 +78,27 @@ def load_data(map_file):
     global anonymize_map
 
     # File must be given and exist, then load its content
-    if map_file != '' and os.path.isfile(map_file):
-        dataIn = codecs.open(map_file, 'r', 'utf-8')
-        for line in dataIn:
-            # Drop the newline at the end
-            line = line[:-1]
+    if map_file == '' or not(os.path.isfile(map_file)):
+        return
 
-            # Skip empty lines and those starting with #
-            if len(line) == 0 or line[0] == '#':
-                continue
+    anonymize_map = {}
+    dataIn = codecs.open(map_file, 'r', 'utf-8')
+    for line in dataIn:
+        # Drop the newline at the end
+        line = line[:-1]
 
-            fields = line.split(',')
+        # Skip empty lines and those starting with #
+        if len(line) == 0 or line[0] == '#':
+            continue
 
-            # If the line does not have at least two values, exception
-            if len(fields) < 2:
-                raise ValueError('Incorrect line ' + line)
+        fields = line.split(',')
 
-            anonymize_map[fields[0]] = fields[1]
-        dataIn.close()
+        # If the line does not have at least two values, exception
+        if len(fields) < 2:
+            raise ValueError('Incorrect line ' + line)
+
+        anonymize_map[fields[0]] = fields[1]
+    dataIn.close()
 
     # Program the update_map_file when the application terminates
     atexit.register(update_map_file, map_file = map_file)
@@ -116,7 +119,7 @@ def update_map_file(map_file):
     global anonymize_map
 
     # If no file is given, nothing to do
-    if map_file == '':
+    if map_file == '' or anonymize_map == None:
         return
 
     # Open data, loop over elements in the dictionary and write the file
@@ -131,6 +134,7 @@ def find_string(value):
     """
 
     global anonymize_map
+
     return anonymize_map.get(value)
 
 def find_or_encode_string(value, synonyms = None):
@@ -145,6 +149,10 @@ def find_or_encode_string(value, synonyms = None):
 
     # Remove leading and trailing whitespace
     value = value.strip()
+
+    # If anonymize is disabled, terminate
+    if anonymize_map == None:
+        return value
 
     # See if any of the IDs is in the
     digest = find_string(value)
