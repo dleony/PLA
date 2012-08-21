@@ -20,6 +20,7 @@ sys.path.insert(0, _dirName)
 sys.path.insert(0, os.path.join(_dirName, 'pla'))
 
 import pla
+from pla import *
 
 # Load the modules with names without the .py extension
 PLAGcc = imp.load_source('PLAGcc', os.path.join(pla.plaDirectory, 'bin', 'gcc'))
