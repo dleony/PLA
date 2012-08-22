@@ -3,7 +3,7 @@
 #
 # Author: Derick Leony (dleony@it.uc3m.es)
 #
-import os, sys, datetime, ConfigParser, sqlite3, shutil
+import os, sys, datetime, ConfigParser, sqlite3, shutil, subprocess
 
 sys.path.insert(0, 
                 os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -42,7 +42,7 @@ def prepareDataFile(suffix):
     profileDir = os.path.join(ffoxDir, config.get('Profile0', 'Path'))
         
     sqliteFile = os.path.join(profileDir, 'places.sqlite')
-    pla.logMessage('firefox: duplicating file ' + sqliteFile)
+    pla.logMessage('firefox: copy file ' + sqliteFile + ' to ' + _tmpFile)
     shutil.copyfile(sqliteFile, _tmpFile)
         
     # Get the timestamp for the last execution
@@ -65,25 +65,58 @@ def prepareDataFile(suffix):
           WHERE  h.place_id = p.id
           """ + date_clause + """ ORDER  BY visit_date """
     pla.logMessage('firefox: Query = ' + query)
-    c.execute(query)
 
     # Create a duplicate of the data file with the suffix
     toSendFileName = dataFile + '_' + suffix
 
     # Dump the data. Detect empty data because "rowcount" seems broken.
     dataOut = open(toSendFileName, 'w')
-    noData = True
-    for row in c:
-        dataOut.write(row['timestamp'] + ' ' + row['url'] + '\n')
-        noData = False
+ 
+    # Boolean to capture if an alternative executable is needed
+    use_executable = False
+    try:
+        # Try to execute the query
+        c.execute(query)
+
+        for row in c:
+            dataOut.write(row['timestamp'] + ' ' + row['url'] + '\n')
+
+        # Close the statement and the data file
+        c.close()
+
         
-    # Close the statement and the data file
-    c.close()
+    except sqlite3.DatabaseError, e:
+        # Failed, this means the version of the sqlite executable is not
+        # correct, use an alternative.
+        pla.logMessage('Unable to read FFox places with sqlite library')
+        pla.logMessage('Resorting to included binary')
+        use_executable = True
+
+   # See if a seccond attempt to get the data using the executable is needed
+    if use_executable:
+        executable = os.path.join(pla.plaDirectory, 'bin', 'sqlite3')
+        command =  [executable, _tmpFile, query]
+        pla.logMessage('Executing ' + ' '.join(command))
+        pla.logMessage('Output to ' + toSendFileName)
+        try:
+            givenCmd = subprocess.Popen(command, executable = executable,
+                                        stdout = dataOut)
+        except OSError, e:		  
+            print 'Executable not found (OSError in PLA)', e
+            return []
+        except ValueError, e:
+            print 'Incorrect arguments (PLA)', e
+            return []
+        
+        # Wait for the process to terminate and get the output
+        givenCmd.wait()
+
+    # Close the data file
     dataOut.close()
 
     # Remove the profile copy form the tmp directory
     os.remove(_tmpFile)
-    if noData:
+    if os.path.getsize(toSendFileName) == 0:
         pla.logMessage('firefox empty data file detected. Removing')
         os.remove(toSendFileName)
         return []
