@@ -23,7 +23,7 @@
 #
 import os, sys, tarfile, time, datetime, subprocess, shutil, random, re, pysvn
 
-__all__ = ['bash', 'firefox', 'google-chrome', 'last', 'iwatch']
+__all__ = ['bash', 'firefox', 'chrome', 'last', 'iwatch']
 
 # Directory in user HOME containing the instrumented commands
 plaDirectory = os.path.expanduser('~/.pladata')
@@ -168,6 +168,7 @@ def prepareDataFile(dataDir, dataFile, logPrefix, suffix):
     # Create a duplicate of the data file with the suffix
     duplicateFileName = dataFile + '_' + suffix
     try:
+        logMessage(logPrefix + ': Copy ' + dataFile + ' to ' + duplicateFileName)
         shutil.copyfile(dataFile, duplicateFileName)
     except IOError, e:
         # If something went wrong, ignore this file
