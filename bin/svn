@@ -183,6 +183,11 @@ def svnPostCommit(svnClient, svnPLADirectory):
     dataFiles.extend(pla.firefox.prepareDataFile(tarFileName))
 
     ############################################################
+    # Google Chrome instrumentation
+    ############################################################
+    dataFiles.extend(pla.chrome.prepareDataFile(tarFileName))
+
+    ############################################################
     # Javac instrumentation
     ############################################################
     dataFiles.extend(pla.prepareDataFile(PLAJavac.dataDir,
@@ -258,6 +263,10 @@ def svnPostCommit(svnClient, svnPLADirectory):
     pla.removeTemporaryData(pla.firefox.dataDir,
                             pla.firefox.dataFile,
                             'firefox',
+                            tarFileName)
+    pla.removeTemporaryData(pla.chrome.dataDir,
+                            pla.chrome.dataFile,
+                            'chrome',
                             tarFileName)
     try:
         pla.logMessage("svn: update " + svnPLADirectory)
@@ -344,8 +353,14 @@ def svnPostCommit(svnClient, svnPLADirectory):
     ############################################################
     # Firefox reset
     ############################################################
-    # Not needed, because the tmp file has been deleted before and the data file
-    # is already taken care of
+    # Not needed, because the duplicate of the data base has been deleted before
+    # and the data file wih the result of the query has also been removed.
+
+    ############################################################
+    # Chrome reset
+    ############################################################
+    # Not needed, because the duplicate of the data base has been deleted before
+    # and the data file wih the result of the query has also been removed.
     return
 
 def svnPostUpdate(svnPLADirectory):
