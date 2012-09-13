@@ -23,7 +23,7 @@
 #
 import os, sys, tarfile, time, datetime, subprocess, shutil, random, re, pysvn
 
-__all__ = ['bash', 'firefox', 'chrome', 'last', 'iwatch']
+__all__ = 'bash', 'firefox', 'chrome', 'last', 'iwatch'
 
 # Directory in user HOME containing the instrumented commands
 plaDirectory = os.path.expanduser('~/.pladata')
