@@ -7,7 +7,6 @@
 import ConfigParser
 import os
 import ztreamy
-from rdflib import Graph, Namespace, Literal
 
 
 def get_config(file_name):
@@ -40,8 +39,6 @@ class EventPublisher():
         self.publisher.publish(event)
 
     def publish_fields(self, application, data):
-        graph = Graph()
-        ns = Namespace('http://flautin.it.uc3m.es/gastt/')
-        graph.add((ns[application], ns['outputs'], Literal(data)))
-        event = ztreamy.RDFEvent(self.source_id, 'text/n3', graph)
+        event = ztreamy.RDFEvent(self.source_id, 'text/plain', data)
+        event.set_extra_header('application', application)
 
