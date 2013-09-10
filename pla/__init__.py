@@ -22,6 +22,7 @@
 # Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
 #
 import os, sys, tarfile, time, datetime, subprocess, shutil, random, re, pysvn
+import pla.plaztreamy
 
 __all__ = 'bash', 'firefox', 'chrome', 'last', 'iwatch'
 

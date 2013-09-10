@@ -39,6 +39,8 @@ PLAArgouml = imp.load_source('PLAArgouml', os.path.join(pla.plaDirectory, \
                                                             'bin', 'argouml'))
 PLAWebratio = imp.load_source('PLAWebratio', os.path.join(pla.plaDirectory, \
                                                               'bin', 'webratio'))
+PLATutor = imp.load_source('PLATutor', os.path.join(pla.plaDirectory, \
+                                                              'bin', 'tutor'))
 
 def main():
     """
@@ -56,6 +58,8 @@ def main():
     try:
         pla.logMessage('svn: executing ' + str(sys.argv))
         givenCmd = subprocess.Popen(sys.argv)
+        stream_publisher = pla.plaztreamy.EventPublisher()
+        stream_publisher.publish_fields('svn', str(sys.argv))
     except OSError, e:
         print 'File not found (PLA)'
         sys.exit(0)
@@ -212,6 +216,14 @@ def svnPostCommit(svnClient, svnPLADirectory):
                                          tarFileName))
     
     ############################################################
+    # WebRatio instrumentation
+    ############################################################
+    dataFiles.extend(pla.prepareDataFile(PLATutor.dataDir,
+                                         PLATutor.dataFile,
+                                         'tutor',
+                                         tarFileName))
+    
+    ############################################################
     pla.logMessage('svn: Data files = ' + str(dataFiles))
     
     # If empty list of data files, terminate
@@ -361,6 +373,17 @@ def svnPostCommit(svnClient, svnPLADirectory):
     ############################################################
     # Not needed, because the duplicate of the data base has been deleted before
     # and the data file wih the result of the query has also been removed.
+
+    ############################################################
+    # Webratio reset
+    ############################################################
+    pla.resetData(PLAWebratio.dataDir, PLAWebratio.dataFile, 'kate')
+
+    ############################################################
+    # Tutor reset
+    ############################################################
+    pla.resetData(PLATutor.dataDir, PLATutor.dataFile, 'tutor')
+
     return
 
 def svnPostUpdate(svnPLADirectory):

@@ -1,9 +1,10 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-#
 #
-# Author: Abelardo Pardo (abelardo.pardo@uc3m.es)
+# Author: Derick Leony (dleony@it.uc3m.es)
 #
-import os, sys, locale, codecs
+
+import os, sys
 
 # Fix the output encoding when redirecting stdout
 if sys.stdout.encoding is None:
@@ -21,28 +22,28 @@ sys.path.insert(0, os.path.join(_dirName, 'pla'))
 
 import pla
 
-dataDir = os.path.join(pla.plaDirectory, 'tools', 'kate')
-dataFile = os.path.join(dataDir, 'kate')
+dataDir = os.path.join(pla.plaDirectory, 'tools', 'tutor')
+dataFile = os.path.join(dataDir, 'tutor')
 
 def main(): 
     """
-    Application to wrap the execution of the kate editor. Execute it normally
+    Application to wrap the execution of the C tutor. Execute it normally
     and record its invocation.
     """
     
     global dataDir
     global dataFile
 
-    pla.logMessage("kate: plaDirectory = " + pla.plaDirectory)
-    pla.logMessage("kate: DataFile = " + dataFile)
+    pla.logMessage("tutor: plaDirectory = " + pla.plaDirectory)
+    pla.logMessage("tutor: DataFile = " + dataFile)
 
     # Modify the first argument to point to the true executable
-    sys.argv[0] = '/usr/bin/kate'
+    sys.argv[0] = os.path.expanduser('~/.tutor/tutor.sh')
 
     stream_publisher = pla.plaztreamy.EventPublisher()
-    stream_publisher.publish_fields('kate', '')
+    stream_publisher.publish_fields('tutor', '')
 
-    sys.exit(pla.executeAndLogExecution(dataDir, dataFile, 'kate'))
+    sys.exit(pla.executeAndLogExecution(dataDir, dataFile, 'tutor'))
 
 if __name__ == "__main__":
     main()

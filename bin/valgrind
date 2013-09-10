@@ -86,6 +86,9 @@ def main():
         dataOut.write('-END ' + str(originalStatus) + '\n')
         dataOut.close()
 
+    stream_publisher = pla.plaztreamy.EventPublisher()
+    stream_publisher.publish_fields('valgrind', str(originalStatus))
+
     sys.exit(originalStatus)
     
 if __name__ == "__main__":
